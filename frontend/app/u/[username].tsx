@@ -67,11 +67,13 @@ const createCytoscapeHtml = (elementsJson: string) => `
                             'shape': 'data(shape)',
                             'border-width': 'data(borderWidth)',
                             'border-color': 'data(borderColor)',
-                            'width': 'label',
-                            'height': 'label',
-                            'padding': '16px',
+                            'width': '160px',
+                            'height': '80px',
                             'text-wrap': 'wrap',
-                            'text-max-width': '120px',
+                            'text-max-width': '130px',
+                            'text-valign': 'center',
+                            'text-halign': 'center',
+                            'padding': '0px',
                             'transition-property': 'background-color, transform, border-width',
                             'transition-duration': 0.2,
                             'underlay-color': '#000000',
@@ -119,12 +121,12 @@ const createCytoscapeHtml = (elementsJson: string) => `
                   animationDuration: 800,
                   animationEasing: 'ease-out-quint',
                   fit: true,           
-                  padding: 40,         
+                  padding: 80,         
                   componentSpacing: 100,
-                  nodeRepulsion: 400000,
-                  nodeOverlap: 10,
-                  idealEdgeLength: 100,
-                  edgeElasticity: 100,
+                  nodeRepulsion: 900000,
+                  nodeOverlap: 150,
+                  idealEdgeLength: 220,
+                  edgeElasticity: 150,
                   nestingFactor: 5,
                   gravity: 80,
                   numIter: 1000
@@ -132,36 +134,34 @@ const createCytoscapeHtml = (elementsJson: string) => `
             });
 
             cy.on('tap', 'node', function(evt){
-              var node = evt.target;
-              cy.animate({
-                center: { eles: node },
-                zoom: 1.4,
-                duration: 400,
-                easing: 'ease-in-out-cubic'
+               var node = evt.target;
+               cy.animate({center: { eles: node },zoom: 1.4,duration: 400});
+               const message = JSON.stringify({
+                 type: 'node_tap',
+                 nodeId: node.id(),
+                 nodeLabel: node.data('label')
               });
-              if (window.ReactNativeWebView) {
-                window.ReactNativeWebView.postMessage(JSON.stringify({
-                  type: 'node_tap',
-                  nodeId: node.id(),
-                  nodeLabel: node.data('label')
-                }));
-              }
-            });
+            if (window.ReactNativeWebView) {
+              window.ReactNativeWebView.postMessage(message);
+             } else {
+               window.parent.postMessage(message, "*");
+             }
+           });
             
             cy.on('tap', function(evt){
               if(evt.target === cy){
-                cy.animate({
-                  fit: { padding: 40 },
-                  duration: 400,
-                  easing: 'ease-in-out-cubic'
-                });
-                if (window.ReactNativeWebView) {
-                  window.ReactNativeWebView.postMessage(JSON.stringify({
-                    type: 'bg_tap'
-                  }));
+                 cy.animate({
+                   fit: { padding: 40 },
+                   duration: 400
+                  });
+                const message = JSON.stringify({type: 'bg_tap'});
+                if(window.ReactNativeWebView){
+                  window.ReactNativeWebView.postMessage(message);
+                }else{
+                  window.parent.postMessage(message, "*");
                 }
               }
-            });
+           });
 
             window.cy = cy;
         });
@@ -172,7 +172,7 @@ const createCytoscapeHtml = (elementsJson: string) => `
 
 export default function PublicProfilePage() {
   const router = useRouter();
-  const { username } = useLocalSearchParams<{ username: string }>();
+  const { username, fromQuery, imageUrl, expandedDetails } = useLocalSearchParams<{ username: string; fromQuery?: string; imageUrl?: string; expandedDetails?: string; }>();
 
   const [journey, setJourney] = useState<CommunityJourney | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -181,11 +181,50 @@ export default function PublicProfilePage() {
   const webViewRef = React.useRef<WebView>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
+  // Unified routing lifecycle with precise logs and structural isolation
   useEffect(() => {
+
     if (username) {
-      fetchJourney();
+      if (fromQuery === 'true' && expandedDetails) {
+        try {
+          const parsedDetails = JSON.parse(expandedDetails);
+
+          setJourney({
+            username: username,
+            imageUrl: imageUrl || null,
+            statistics: {
+              goals: parsedDetails.goals?.length || 0,
+              experiences: parsedDetails.experiences?.length || 0,
+              transitions: parsedDetails.transitions?.length || 0,
+            },
+            goals: parsedDetails.goals || [],
+            experiences: parsedDetails.experiences || [],
+            transitions: parsedDetails.transitions || [],
+          });
+          setIsLoading(false);
+        } catch (err) {
+          fetchJourney();
+        }
+      } else {
+        fetchJourney();
+      }
+    } else {
+      console.warn("⚠️ No 'username' parameter is present.");
     }
-  }, [username]);
+  }, [username, fromQuery, imageUrl, expandedDetails]);
+
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      const handleWebMessage = (event: MessageEvent) => {
+        if (event.data && typeof event.data === 'string') {
+          handleWebViewMessage({ nativeEvent: { data: event.data } } as any);
+        }
+      };
+
+      window.addEventListener('message', handleWebMessage);
+      return () => window.removeEventListener('message', handleWebMessage);
+    }
+  }, []);
 
   const fetchJourney = async () => {
     try {
@@ -203,7 +242,7 @@ export default function PublicProfilePage() {
   const handleShare = async () => {
     try {
       await Share.share({
-        message: `Check out ${username || 'this user'}'s professional journey on PathFinder! https://pathfinder.app/u/${username || 'user'}`,
+        message: `Check out ${username || 'this user'}'s professional journey on PathFinder! https://path-finder-murex-six.vercel.app/u/${username || 'user'}`,
       });
     } catch (error: any) {
       console.warn(error.message);
@@ -276,9 +315,19 @@ export default function PublicProfilePage() {
     });
 
     // Transitions
-    journey.transitions.forEach((t, idx) => {
-      elements.push({ data: { id: 't_' + idx, source: 'x_' + t.fromExperienceId, target: 'x_' + t.toExperienceId, label: t.decisionLabel } });
-    });
+    const validExperienceIds = new Set(journey.experiences.map(exp => exp.id));
+    journey.transitions.filter(
+      t => validExperienceIds.has(t.fromExperienceId) && validExperienceIds.has(t.toExperienceId))
+      .forEach((t, idx) => {
+        elements.push({
+          data: {
+            id: `t_${idx}`,
+            source: `x_${t.fromExperienceId}`,
+            target: `x_${t.toExperienceId}`,
+            label: t.decisionLabel,
+          },
+        });
+      });
 
     return JSON.stringify(elements);
   };
@@ -362,9 +411,8 @@ export default function PublicProfilePage() {
         >
           <Feather name="arrow-left" size={20} color={L.navy} />
         </TouchableOpacity>
-        
         <Text style={{ fontSize: 16, fontWeight: '600', color: L.navy, letterSpacing: 0.4 }}>Public Profile</Text>
-        
+
         <TouchableOpacity onPress={() => setShowGraph(true)} style={{ backgroundColor: L.tealTint, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, flexDirection: 'row', alignItems: 'center' }}>
           <Feather name="git-merge" size={14} color={L.teal} style={{ marginRight: 6 }} />
           <Text style={{ fontSize: 12, fontWeight: '700', color: L.teal }}>Graph</Text>
@@ -387,7 +435,7 @@ export default function PublicProfilePage() {
           <View>
             <Text style={{ fontSize: 16, fontWeight: '500', color: L.navy }}>@{journey.username}</Text>
             <Text style={{ fontSize: 12, fontWeight: '500', color: L.teal, marginTop: 4 }}>
-              {journey.statistics.goals} Goals • {journey.statistics.experiences} Experiences
+              {journey.statistics?.goals || 0} Goals • {journey.statistics?.experiences || 0} Experiences
             </Text>
           </View>
         </View>
@@ -481,24 +529,34 @@ export default function PublicProfilePage() {
       {/* Graph Modal */}
       < Modal visible={showGraph} animationType="slide" presentationStyle="formSheet" >
         <View style={{ flex: 1, backgroundColor: L.background }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, borderBottomWidth: 1, borderBottomColor: L.border, backgroundColor: L.surface }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 20, paddingTop: 45, borderBottomWidth: 1, borderBottomColor: L.border, backgroundColor: L.surface }}>
             <Text style={{ fontSize: 18, fontWeight: '700', color: L.navy }}>Knowledge Graph Preview</Text>
             <TouchableOpacity onPress={() => setShowGraph(false)} style={{ padding: 8, backgroundColor: L.surface, borderRadius: 20 }}>
               <Feather name="x" size={20} color={L.navy} />
             </TouchableOpacity>
           </View>
           {Platform.OS === 'web' ? (
-            <iframe
-              // @ts-ignore
-              srcDoc={createCytoscapeHtml(prepareGraphElements())}
-              style={{ flex: 1, width: '100%', height: '100%', border: 'none' }}
-            />
+            <>
+              <iframe
+                id="cy-iframe"
+                // @ts-ignore
+                srcDoc={createCytoscapeHtml(prepareGraphElements())}
+                style={{ flex: 1, width: '100%', height: '100%', border: 'none' }}
+              />
+              {renderBottomSheet()}
+            </>
           ) : (
-            <WebView
-              originWhitelist={['*']}
-              source={{ html: createCytoscapeHtml(prepareGraphElements()) }}
-              style={{ flex: 1 }}
-            />
+            <>
+              <WebView
+                ref={webViewRef}
+                originWhitelist={['*']}
+                source={{ html: createCytoscapeHtml(prepareGraphElements()) }}
+                style={{ flex: 1 }}
+                scrollEnabled={false}
+                onMessage={handleWebViewMessage}
+              />
+              {renderBottomSheet()}
+            </>
           )}
         </View>
       </Modal >

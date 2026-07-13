@@ -8,8 +8,19 @@ export interface JourneyStatistics {
 export function buildJourneyStatistics(
   context: RetrievedContext
 ): JourneyStatistics {
+  const matchedUsers = new Set<string>();
+
+  for (const journey of context.journeys) {
+    if (
+      journey.experienceIds.some((id) =>
+        context.experiences.some((e) => e.id === id)
+      )
+    ) {
+      matchedUsers.add(journey.username);
+    }
+  }
   return {
-    usersAnalyzed: context.usernames.length,
+    usersAnalyzed: matchedUsers.size,
     experiencesAnalyzed: context.experiences.length,
   };
 }

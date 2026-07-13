@@ -8,7 +8,7 @@ const upload = multer({storage: multer.memoryStorage(),});
 router.post("/start", requireAuth, startJourneyController);
 router.post("/message", requireAuth, continueJourneyController);
 router.post("/submit/goal",requireAuth,submitGoalController);
-router.post("/submit", requireAuth, upload.any(),submitJourneyController);
+router.post("/submit", requireAuth,upload.single("proof"),submitJourneyController);
 
 
 export default router;

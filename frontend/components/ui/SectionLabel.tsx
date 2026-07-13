@@ -62,7 +62,7 @@ export function PillBadge({ label, color, bgColor, style }: PillBadgeProps) {
         ellipsizeMode="tail"
         style={{
           fontFamily: 'JetBrainsMono_700Bold',
-          fontSize: 9,
+          fontSize: 8,
           letterSpacing: 1,
           textTransform: 'uppercase',
           color: color || UI.fg50,

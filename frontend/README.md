@@ -7,9 +7,6 @@ Expo React Native app for PathFinder. Built with [Expo SDK 56](https://docs.expo
 - [Node.js](https://nodejs.org/) >= 18
 - [Expo Go](https://expo.dev/go) app on your phone (for physical device testing)
 
-## Recent Updates
-- **UI Overhaul:** The app has been fully updated to a Premium Light Theme using a new brand palette (`#1A202C`, `#36585E`, `#D06757`, `#FBFBF9`).
-- **Stability:** Fixed infinite redirect loops in authentication and swapped `console.error` for `console.warn` to prevent disruptive LogBox popups during async failures.
 
 ## Setup
 
@@ -51,41 +48,59 @@ The `EXPO_PUBLIC_API_BASE_URL` depends on how you're running the app:
 
 ## Project Structure
 
-```
+```text
 frontend/
-├── app/                    # Expo Router file-based routes
-│   ├── _layout.tsx         # Root layout with Clerk provider
-│   ├── index.tsx           # Landing / category selection
-│   ├── profile.tsx         # Onboarding profile setup
-│   ├── dashboard.tsx       # Personal dashboard
-│   ├── query.tsx           # Voice + text query input
-│   ├── results.tsx         # Results dashboard with carousel
-│   ├── full-journey.tsx    # Vertical flowchart visualization
-│   ├── journey-details.tsx # Expanded journey event details
-│   ├── share-journey.tsx   # Chat-based journey submission
-│   ├── oauth-native-callback.tsx # Clerk OAuth redirect handler
-│   └── u/[username].tsx    # Public profile (dynamic route)
+├── app/                          # Expo Router (file-based routing)
+│   ├── (tabs)/                   # Bottom tab navigation
+│   │   ├── _layout.tsx           # Tab navigator configuration
+│   │   ├── index.tsx             # Home dashboard
+│   │   ├── explore.tsx           # AI query & discovery
+│   │   ├── community.tsx         # Community journeys
+│   │   ├── journey.tsx           # User journey overview
+│   │   └── profile.tsx           # User profile
+│   ├── full-journey/             # Interactive graph/timeline views
+│   ├── _layout.tsx               # Root layout with providers
+│   ├── +html.tsx                 # Web HTML configuration
+│   ├── index.tsx                 # Landing page
+│   ├── journey-details.tsx       # Detailed journey visualization
+│   ├── oauth-native-callback.tsx # Clerk OAuth callback
+│   ├── results.tsx               # AI retrieval results
+│   └── share-journey.tsx         # Chat-based onboarding & submission
+│
+├── api/                          # API client & request wrappers
+├── assets/                       # Images, icons, fonts, splash assets
+├── components/
+│   ├── community/                # Community UI components
+│   ├── landing/                  # Landing page sections
+│   └── ui/                       # Shared reusable UI components
+│
 ├── constants/
-│   └── colors.ts           # Emotion & node-type color system
+│   └── colors.ts                 # Theme & color palette
+│
+├── services/                     # Backend API services
 ├── types/
-│   └── schema.ts           # TypeScript interfaces for backend data
-├── utils/
-│   └── helpers.ts          # Milestone extraction utilities
-├── assets/                 # App icons, splash screens
-├── .env.example            # Environment variable template
-├── app.json                # Expo config
-└── package.json
+│   └── schema.ts                 # Shared TypeScript interfaces
+├── utils/                        # Helper utilitie
 ```
 
 ## Key Dependencies
 
 | Package | Purpose |
 |---------|---------|
-| `expo-router` | File-based routing |
-| `@clerk/clerk-expo` | Authentication |
-| `expo-secure-store` | Secure token storage |
-| `expo-av` | Audio recording & playback |
-| `expo-file-system` | Local file storage for audio |
+| `expo-router` | File-based routing and navigation |
+| `@clerk/clerk-expo` | Authentication and user management |
+| `expo-secure-store` | Secure storage for authentication tokens |
+| `expo-auth-session` | OAuth authentication flow |
+| `expo-av` | Voice recording and audio playback |
+| `expo-file-system` | Local file management and uploads |
+| `expo-document-picker` | PDF proof selection |
+| `expo-image-picker` | Image proof selection |
+| `expo-sharing` | Sharing journey visualizations |
+| `nativewind` | Tailwind CSS styling for React Native |
+| `react-native-reanimated` | High-performance animations |
+| `react-native-gesture-handler` | Gesture-based interactions |
+| `react-native-svg` | Graph and visualization rendering |
+| `react-native-webview` | Embedded web content (Neo4j graph visualization) |
 
 ## API Endpoints Used
 

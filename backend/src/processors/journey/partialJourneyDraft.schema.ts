@@ -13,11 +13,11 @@ export const partialJourneyDraftSchema: Schema = {
                     },
                     startDate: {
                         type: SchemaType.STRING,
-                        description: "Format: MMM YYYY. Example: Jan 2024",
+                        description: "Format: MM YYYY. Example: 01 2024",
                     },
                     endDate: {
                         type: SchemaType.STRING,
-                        description: "Format: MMM YYYY. Example: Aug 2024",
+                        description: "Format: MM YYYY. Example: 08 2024",
                     },
                     context: {
                         type: SchemaType.STRING,

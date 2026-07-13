@@ -8,7 +8,7 @@ export interface QueryResponse {
   aggregatedContext?: string;
 }
 
-import * as FileSystem from 'expo-file-system';
+import { File } from "expo-file-system";
 import { Platform } from 'react-native';
 
 export async function submitQuery(
@@ -17,49 +17,39 @@ export async function submitQuery(
   audioUri?: string | null
 ): Promise<QueryResponse> {
   let response: Response;
-
   if (audioUri) {
     const formData = new FormData();
-    if (Platform.OS === 'web') {
-      try {
-        const res = await fetch(audioUri);
-        const blob = await res.blob();
-        formData.append('audio', blob, 'recording.m4a');
-      } catch (e) {
-        console.error("Failed to fetch blob on web", e);
-      }
+    if (Platform.OS === "web") {
+      const res = await fetch(audioUri);
+      const blob = await res.blob();
+      formData.append("audio", blob, "recording.m4a");
     } else {
-      formData.append('audio', {
-        uri: audioUri,
-        name: 'recording.m4a',
-        type: 'audio/m4a',
-      } as any);
+      const file = new File(audioUri);
+      formData.append("audio", file);
     }
-
     response = await fetch(`${API_BASE_URL}/query`, {
-      method: 'POST',
-      body: formData,
+      method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
       },
+      body: formData,
     });
   } else if (searchText) {
     response = await fetch(`${API_BASE_URL}/query`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ query: searchText }),
     });
   } else {
-    throw new Error('Must provide either text query or audio.');
+    throw new Error("Must provide either text query or audio.");
   }
-
   if (!response.ok) {
     const message = await response.text();
     throw new Error(`API error: ${message}`);
   }
 
-  return response.json() as Promise<QueryResponse>;
+  return (await response.json()) as QueryResponse;
 }

@@ -1,4 +1,7 @@
 import { apiFetch } from "./api";
+import { File } from "expo-file-system";
+import { fetch } from "expo/fetch";
+import { Platform } from 'react-native';
 
 export interface JourneyExperience {
   id: string;
@@ -121,8 +124,10 @@ export async function sendJourneyMessage(
 
 export interface SubmitGoalResponse {
   success: boolean;
-  id: string;
-  title: string;
+  goal: {
+    id: string;
+    title: string;
+  };
 }
 
 /**
@@ -153,42 +158,68 @@ export async function submitJourneyGoal(
 /**
  * Submit the final parsed journey draft for graph creation
  */
+
 export async function submitJourney(
   token: string,
   conversationId: string,
   journeyPayload: any,
-  files?: { id: string; uri: string; name: string; type: string }[]
+  file?: {
+    id: string;
+    uri: string;
+    name: string;
+    type: string;
+  }
 ): Promise<SubmitJourneyResponse> {
-  if (files && files.length > 0) {
+  if (file) {
     const formData = new FormData();
-    
-    // Append 'journey' as a JSON string containing conversationId and the payload
-    formData.append('journey', JSON.stringify({ conversationId, ...journeyPayload }));
-    
-    files.forEach(f => {
-      formData.append(f.id, {
-        uri: f.uri,
-        name: f.name,
-        type: f.type,
-      } as any);
-    });
 
-    return apiFetch<SubmitJourneyResponse>(
-      "/journey/submit",
-      {
-        method: "POST",
-        body: formData,
-      },
-      token,
-      true // isMultipart
-    );
+formData.append(
+  "journey",
+  JSON.stringify({
+    conversationId,
+    ...journeyPayload,
+  })
+);
+
+if (Platform.OS === "web") {
+  const response = await fetch(file.uri);
+  const blob = await response.blob();
+
+  formData.append("proof", blob, file.name);
+} else {
+  const uploadFile = new File(file.uri);
+
+  formData.append("proof", uploadFile,file.name);
+}
+
+const response = await fetch(
+  `${process.env.EXPO_PUBLIC_API_BASE_URL}/journey/submit`,
+  {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  }
+);
+
+    if (!response.ok) {
+      throw new Error(await response.text());
+    }
+
+    return response.json();
   }
 
   return apiFetch<SubmitJourneyResponse>(
     "/journey/submit",
     {
       method: "POST",
-      body: JSON.stringify({ journey: JSON.stringify({ conversationId, ...journeyPayload }) }),
+      body: JSON.stringify({
+        journey: JSON.stringify({
+          conversationId,
+          ...journeyPayload,
+        }),
+      }),
     },
     token
   );

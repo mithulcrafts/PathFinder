@@ -16,7 +16,7 @@ import { validateExperienceDuplicate } from "./staticAnalysis/experienceDuplicat
 import { deleteJourneySession } from "../../services/journeySession.service.js";
 import { addExperienceReputation } from "../../services/reputation.service.js";
 import { verifyProof } from "./verifyProof.processor.js";
-import {z} from "zod";
+import { z } from "zod";
 
 function normalizeJourneyExperience(
     experience: z.infer<typeof journeyExperienceSchema>
@@ -31,10 +31,10 @@ function normalizeJourneyExperience(
         achievements: experience.achievements ?? null,
         isVerified: experience.isVerified ?? false,
         proofs: experience.proofs.map((proof) => ({
-      ...proof,
-      verifiedAt: proof.verifiedAt ?? null,
-      reason: proof.reason ?? null,
-    })),
+            ...proof,
+            verifiedAt: proof.verifiedAt ?? null,
+            reason: proof.reason ?? null,
+        })),
     };
 }
 
@@ -72,7 +72,7 @@ export async function submitJourney(
     userId: string,
     conversationId: string,
     input: SubmitJourney,
-    proofFiles: Map<string, Express.Multer.File>
+    proofFile: Express.Multer.File | null
 ): Promise<SubmitJourneyResponse> {
     const validation = submitJourneySchema.safeParse(input);
     if (!validation.success) {
@@ -90,13 +90,16 @@ export async function submitJourney(
                 verifyProof(
                     experience,
                     proof,
-                    proofFiles.get(proof.id) ?? null
+                    proofFile
                 )
             )
         );
 
+        const { decisionReason,
+            ...experienceWithoutDecisionReason } = experience;
+
         const parsed = journeyExperienceSchema.safeParse({
-            ...experience,
+            ...experienceWithoutDecisionReason,
             proofs: verifiedProofs,
             isVerified: verifiedProofs.some(
                 (proof) => proof.status === "verified"
@@ -170,35 +173,50 @@ export async function submitJourney(
         const inferred = await inferTransition(candidates.current, candidates.top5);
         inferredTransitions.push(inferred);
     }
-    const validatedTransitions: JourneyTransition[] = inferredTransitions.map(
-        (transition) => {
-            const currentExperience = verifiedExperiences.find((experience) => experience.title === transition.currentTitle);
-            if (!currentExperience) {
-                throw new Error(`Current experience "${transition.currentTitle}" not found.`);
-            }
-            const previousExperience = verifiedExperiences.find((experience) => experience.title === transition.fromTitle);
-            if (!previousExperience) {
-                throw new Error(`Previous experience "${transition.fromTitle}" not found.`);
-            }
-            const decisionLabel = submittedExperiences.find(
-                (experience) => experience.title === transition.currentTitle)?.decisionReason;
-            if (!decisionLabel) {
-                throw new Error(
-                    `Decision reason not found for "${transition.currentTitle}".`
-                );
-            }
-            const parsed = journeyTransitionSchema.safeParse({
-                fromExperienceId: previousExperience.id,
-                toExperienceId: currentExperience.id,
-                decisionLabel,
-            });
-            if (!parsed.success) {
-                throw new Error(
-                    `Invalid transition: ${parsed.error.message}`
-                );
-            }
-            return parsed.data;
+    const validatedTransitions = inferredTransitions
+    .map((transition): JourneyTransition | null => {
+        const currentExperience = verifiedExperiences.find(
+            (experience) => experience.title === transition.currentTitle
+        );
+        if (!currentExperience) {
+            console.warn(
+                `Skipping transition: current experience "${transition.currentTitle}" not found.`
+            );
+            return null;
         }
+        const previousExperience = verifiedExperiences.find(
+            (experience) => experience.title === transition.fromTitle
+        );
+        if (!previousExperience) {
+            console.warn(
+                `Skipping transition: previous experience "${transition.fromTitle}" not found.`
+            );
+            return null;
+        }
+        const decisionLabel = submittedExperiences.find(
+            (experience) => experience.title === transition.currentTitle
+        )?.decisionReason;
+        if (!decisionLabel) {
+            console.warn(
+                `Skipping transition: no decision reason for "${transition.currentTitle}".`
+            );
+            return null;
+        }
+        const parsed = journeyTransitionSchema.safeParse({
+            fromExperienceId: previousExperience.id,
+            toExperienceId: currentExperience.id,
+            decisionLabel,
+        });
+        if (!parsed.success) {
+            console.warn(
+                `Skipping invalid transition: ${parsed.error.message}`
+            );
+            return null;
+        }
+        return parsed.data;
+    })
+    .filter(
+        (t): t is JourneyTransition => t !== null
     );
     await createTransitions(validatedTransitions);
     const verifiedCount = verifiedExperiences.filter((experience) => experience.isVerified).length;

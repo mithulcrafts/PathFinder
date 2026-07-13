@@ -6,23 +6,21 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "channel": "development"
-    },
-    "preview": {
-      "distribution": "internal",
-      "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "https://pathfinder-f7zc.onrender.com/api"
-      },
-      "channel": "preview"
-    },
-    "production": {
-      "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "https://pathfinder-f7zc.onrender.com/api"
-      },
-      "channel": "production",
+      "channel": "development",
       "android": {
         "buildType": "apk"
       }
+    },
+    "preview": {
+      "distribution": "internal",
+      "environment": "preview",
+      "channel": "preview",
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "production": {
+      "channel": "production"
     }
   },
   "submit": {

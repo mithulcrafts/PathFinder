@@ -29,26 +29,9 @@ export default function TabLayout() {
         },
       }}
     >
+
       <Tabs.Screen
-        name="explore"
-        options={{
-          title: 'Explore',
-          tabBarIcon: ({ color, focused }) => (
-            <View style={{ alignItems: 'center' }}>
-              {focused && (
-                <View style={{
-                  width: 20, height: 3, borderRadius: 1.5,
-                  backgroundColor: L.teal,
-                  position: 'absolute', top: -8,
-                }} />
-              )}
-              <Feather name="compass" size={22} color={color} />
-            </View>
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="index"
+        name="ask"
         options={{
           title: 'Ask',
           tabBarIcon: ({ color, focused }) => (
@@ -79,6 +62,24 @@ export default function TabLayout() {
                 }} />
               )}
               <Feather name="map" size={22} color={color} />
+            </View>
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="community"
+        options={{
+          title: 'Community',
+          tabBarIcon: ({ color, focused }) => (
+            <View style={{ alignItems: 'center' }}>
+              {focused && (
+                <View style={{
+                  width: 20, height: 3, borderRadius: 1.5,
+                  backgroundColor: L.teal,
+                  position: 'absolute', top: -8,
+                }} />
+              )}
+              <Feather name="users" size={22} color={color} />
             </View>
           ),
         }}

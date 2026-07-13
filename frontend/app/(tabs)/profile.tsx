@@ -34,6 +34,7 @@ export default function ProfilePage() {
   const [user, setUser] = useState<SyncedUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const usernameInputRef = useRef<TextInput>(null);
 
   const [username, setUsername] = useState('');
   const [languageCode, setLanguageCode] = useState('en');
@@ -76,7 +77,7 @@ export default function ProfilePage() {
       if (!token) throw new Error("Not authenticated");
       const updatedUser = await updateProfile(token, { username, preferredLanguage: code });
       setUser(updatedUser);
-      
+
       setShowSuccessTick('language');
       languageScale.value = withSequence(withSpring(1.2, { damping: 10 }), withSpring(1));
       setTimeout(() => setShowSuccessTick(null), 2000);
@@ -92,7 +93,7 @@ export default function ProfilePage() {
       if (!token) throw new Error("Not authenticated");
       const updatedUser = await updateProfile(token, { username, preferredLanguage: languageCode });
       setUser(updatedUser);
-      
+
       setShowSuccessTick('username');
       usernameScale.value = withSequence(withSpring(1.2, { damping: 10 }), withSpring(1));
       setTimeout(() => setShowSuccessTick(null), 2000);
@@ -103,7 +104,7 @@ export default function ProfilePage() {
 
   const handleSignOut = async () => {
     await signOut();
-    router.replace('/');
+    router.replace("/");
   };
 
   const usernameAnimStyle = useAnimatedStyle(() => ({ transform: [{ scale: usernameScale.value }] }));
@@ -141,11 +142,10 @@ export default function ProfilePage() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: L.background }}>
       {/* Header */}
-      <Animated.View entering={FadeInDown.duration(400).springify()} style={{ paddingHorizontal: 24, paddingTop: 32, paddingBottom: 8 }}>
+      <Animated.View entering={FadeInDown.duration(400).springify()} style={{ paddingHorizontal: 24, paddingTop: 48, paddingBottom: 8 }}>
         <SectionLabel>Your Details</SectionLabel>
         <Text style={{
-          fontFamily: 'InstrumentSerif_400Regular',
-          fontSize: 48, color: L.navy, marginTop: 4, letterSpacing: -1
+          fontFamily: 'Monospace_500Medium', fontSize: 30, letterSpacing: -1
         }}>
           Profile
         </Text>
@@ -153,8 +153,8 @@ export default function ProfilePage() {
 
       <DotDivider style={{ marginHorizontal: 24, marginBottom: 24 }} />
 
-      <ScrollView style={{ flex: 1, paddingHorizontal: 24 }} showsVerticalScrollIndicator={false}>
-        
+      <ScrollView style={{ flex: 1, paddingHorizontal: 24 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+
         {/* Avatar Section */}
         <Animated.View entering={FadeInUp.delay(100).duration(400).springify()} style={{ alignItems: 'center', marginBottom: 40 }}>
           <View style={{
@@ -173,7 +173,7 @@ export default function ProfilePage() {
           <Text style={{ fontSize: 22, color: L.navy, fontFamily: 'Inter_700Bold', letterSpacing: -0.5 }}>
             {displayName}
           </Text>
-          
+
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12 }}>
             <PillBadge label={`${reputationScore} REP`} color={L.terracotta} bgColor={L.terracottaTint} />
             {reputationScore > 0 && (
@@ -185,23 +185,46 @@ export default function ProfilePage() {
         {/* Editable Fields */}
         <Animated.View entering={FadeInUp.delay(200).duration(400).springify()} style={{ marginBottom: 40, gap: 16 }}>
           {/* Username Field */}
-          <View style={{
-            backgroundColor: L.surface, borderRadius: 12, borderWidth: 1, borderColor: L.border, padding: 20,
-            shadowColor: L.navy, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.02, shadowRadius: 8, elevation: 1
-          }}>
+          <View
+            style={{
+              backgroundColor: L.surface, borderRadius: 12, borderWidth: 1, borderColor: L.border, padding: 20,
+              shadowColor: L.navy, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.02, shadowRadius: 8, elevation: 1
+            }}
+          >
             <SectionLabel style={{ marginBottom: 12 }}>USERNAME</SectionLabel>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+
               <TextInput
-                style={{ fontSize: 16, color: L.navy, flex: 1, padding: 0, fontFamily: 'Inter_600SemiBold' }}
+                ref={usernameInputRef}
+                style={{
+                  fontSize: 16,
+                  color: L.navy,
+                  flex: 1,
+                  padding: 0,
+                  fontFamily: 'Inter_600SemiBold',
+                  pointerEvents: 'auto'
+                }}
                 value={username}
-                onChangeText={setUsername}
+                onChangeText={(text) => {
+                  console.log("Typing:", text);
+                  setUsername(text);
+                }}
                 onBlur={handleSaveUsername}
                 onSubmitEditing={handleSaveUsername}
+                editable={true} 
+                selectTextOnFocus={true}
                 returnKeyType="done"
                 placeholder="Set Username"
-                placeholderTextColor={L.navySoft}
+                placeholderTextColor={L.lightGray}
               />
-              <TouchableOpacity onPress={() => { Keyboard.dismiss(); handleSaveUsername(); }}>
+
+              <TouchableOpacity
+                onPress={() => {
+                  Keyboard.dismiss();
+                  handleSaveUsername();
+                }}
+                style={{ paddingLeft: 10 }}
+              >
                 <Animated.View style={usernameAnimStyle}>
                   {showSuccessTick === 'username' ? (
                     <Feather name="check" size={20} color={L.teal} />
@@ -219,7 +242,7 @@ export default function ProfilePage() {
             shadowColor: L.navy, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.02, shadowRadius: 8, elevation: 1
           }}>
             <SectionLabel style={{ marginBottom: 12 }}>LANGUAGE</SectionLabel>
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => bottomSheetRef.current?.expand()}
               style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
             >
@@ -266,7 +289,7 @@ export default function ProfilePage() {
       >
         <View style={{ flex: 1, paddingHorizontal: 24, paddingTop: 16 }}>
           <Text style={{ fontSize: 20, color: L.navy, marginBottom: 16, fontFamily: 'InstrumentSerif_400Regular' }}>Select Language</Text>
-          
+
           <View style={{
             flexDirection: 'row', alignItems: 'center',
             backgroundColor: L.background, borderRadius: 12, paddingHorizontal: 12, marginBottom: 16,

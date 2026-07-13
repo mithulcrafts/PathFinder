@@ -63,6 +63,7 @@ export interface UserTrajectory {
   skills?: any[];
   summary?: string;
   expertiseAreas?: string[];
+  imageUrl?: string | null;
   expandedDetails?: {
     goals: any[];
     experiences: any[];

@@ -377,6 +377,8 @@ export async function getCommunityJourney(
         avatarUrl: userRecord!.get("avatarUrl"),
         reputationScore: Number(userRecord!.get("reputationScore"))
       },
+      username: userRecord!.get("username"),
+      imageUrl: userRecord!.get("avatarUrl"),
       statistics: {
         goals: goals.length,
         experiences: experiences.length,

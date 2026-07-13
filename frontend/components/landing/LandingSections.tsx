@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Image, Linking } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Image, Linking, useWindowDimensions, Platform } from 'react-native';
 import { MaterialCommunityIcons, MaterialIcons, Feather } from '@expo/vector-icons';
 import Animated, {
   Easing,
@@ -21,73 +21,70 @@ const LegacyUI = {
 };
 import { GradientButton } from '../ui/GradientButton';
 import { SectionLabel, PillBadge } from '../ui/SectionLabel';
-import { FloatingParticles } from './FloatingParticles';
+
 import Svg, { Path } from 'react-native-svg';
 
-// ═══════════════════════════════════════════════════════
 //  Shared style helpers 
-// ═══════════════════════════════════════════════════════
 
 const s = {
-  h1: { fontSize: 36, color: LegacyUI.foreground, letterSpacing: -0.5, lineHeight: 42, fontFamily: 'InstrumentSerif_400Regular' },
-  h2: { fontSize: 24, color: LegacyUI.foreground, letterSpacing: -0.3, lineHeight: 28, fontFamily: 'InstrumentSerif_400Regular' },
-  body: { fontSize: 15, fontWeight: '400' as const, color: LegacyUI.fg50, lineHeight: 24, fontFamily: 'Manrope_400Regular' },
-  micro: { fontSize: 13, fontWeight: '400' as const, lineHeight: 18, color: LegacyUI.fg40, fontFamily: 'Manrope_400Regular' },
-  sectionPy16: { paddingVertical: 64, paddingHorizontal: 24 },
+  h1: { fontSize: 28, color: LegacyUI.foreground, lineHeight: 36, fontFamily: 'Manrope_700Bold' },
+  h2: { fontSize: 22, color: LegacyUI.foreground, lineHeight: 30, fontFamily: 'Manrope_600SemiBold' },
+  body: { fontSize: 15, fontWeight: '400' as const, color: L.navy, lineHeight: 24, fontFamily: 'Manrope_400Regular' },
+  micro: { fontSize: 13, fontWeight: '400' as const, lineHeight: 18, color:L.gray, fontFamily: 'Manrope_400Regular' },
+  sectionPy16: { paddingVertical: 50, paddingHorizontal: 24 },
 };
-
-// ═══════════════════════════════════════════════════════
-//  1. HERO
-//  min-h ~92% first viewport, centered, auth buttons
-// ═══════════════════════════════════════════════════════
 
 type HeroProps = {
   onPressGoogle: () => void;
 };
 
 export function HeroSection({ onPressGoogle }: HeroProps) {
+  const { height } = useWindowDimensions();
+  // Use exact window height for all platforms to guarantee full screen fit.
+  const minHeight = height;
+
   return (
-    <SectionReveal style={{ minHeight: 700, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 80, backgroundColor: LegacyUI.surfaceInverse }}>
-      <FloatingParticles />
-      
+    <SectionReveal style={{ minHeight, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 80, backgroundColor: LegacyUI.surfaceInverse }}>
+
       {/* Logo mark */}
       <StaggerItem index={0}>
         <Image
           source={require('../../assets/logo-dark.png')}
-          style={{ width: 64, height: 64, borderRadius: 16, marginBottom: 24 }}
+          style={{ width: 90, height: 90, borderRadius: 16, marginBottom: 16 }}
+          resizeMode="contain"
+        />
+      </StaggerItem>
+      {/* Small top label */}
+      <StaggerItem index={1}>
+        <Image
+          source={require('../../assets/title-dark.png')}
+          style={{ width: 350, height: 70, borderRadius: 16, marginBottom: 4 }}
           resizeMode="contain"
         />
       </StaggerItem>
 
-      {/* Small top label */}
-      <StaggerItem index={1}>
-        <SectionLabel color="rgba(255,255,255,0.4)" style={{ marginBottom: 40 }}>PATHFINDER · BETA</SectionLabel>
-      </StaggerItem>
-
-      {/* Tagline matching the "Read the research." style */}
-      <StaggerItem index={2}>
-        <Text style={{ fontSize: 56, color: '#FFFFFF', textAlign: 'center', fontFamily: 'InstrumentSerif_400Regular', lineHeight: 64, letterSpacing: -1 }}>
-          The search engine for
+      {/* Tagline */}
+      <StaggerItem index={2} style={{ alignItems: 'center', marginBottom: 24 }}>
+        <Text style={{ fontSize: 16, color: L.surface, textAlign: 'center', fontFamily: s.h1.fontFamily, letterSpacing: 0.8 }}>
+          THE SEARCH ENGINE FOR
         </Text>
-      </StaggerItem>
-      <StaggerItem index={3}>
-        <Text style={{ fontSize: 56, color: LegacyUI.accent, textAlign: 'center', fontFamily: 'InstrumentSerif_400Regular', lineHeight: 64, letterSpacing: -1, marginBottom: 24 }}>
-          human experiences.
+        <Text style={{ fontSize: 22, color: LegacyUI.accent, textAlign: 'center', fontFamily: s.h1.fontFamily, letterSpacing: 1, marginTop: 2 }}>
+          HUMAN EXPERIENCES
         </Text>
       </StaggerItem>
 
       {/* Supporting sentence */}
-      <StaggerItem index={4} style={{ width: '100%', alignItems: 'center' }}>
-        <Text style={{ fontSize: 18, color: 'rgba(255,255,255,0.6)', textAlign: 'center', lineHeight: 28, maxWidth: '85%', marginBottom: 48, fontFamily: 'Manrope_400Regular' }}>
+      <StaggerItem index={3} style={{ width: '100%', alignItems: 'center' }}>
+        <Text style={{ fontSize: 15, color: L.lightGray, textAlign: 'center', lineHeight: 24, maxWidth: '90%', marginBottom: 48, fontFamily: s.h2.fontFamily, opacity: 0.85 }}>
           Learn from real, verified journeys of founders, professionals, and students who have already walked the path you're considering.
         </Text>
       </StaggerItem>
 
       {/* Auth buttons */}
-      <StaggerItem index={5} style={{ width: '100%', maxWidth: 300, alignItems: 'center' }}>
-        <TouchableOpacity 
+      <StaggerItem index={4} style={{ width: '100%', maxWidth: 300, alignItems: 'center' }}>
+        <TouchableOpacity
           onPress={onPressGoogle}
-          style={{ 
+          style={{
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'center',
@@ -100,12 +97,12 @@ export function HeroSection({ onPressGoogle }: HeroProps) {
           }}
           activeOpacity={0.8}
         >
-          <Image 
+          <Image
             source={require('../../assets/google.png')}
             style={{ width: 24, height: 24 }}
             resizeMode="contain"
           />
-          <Text style={{ 
+          <Text style={{
             color: '#FFFFFF',
             fontSize: 16,
             fontFamily: 'Inter_600SemiBold'
@@ -116,8 +113,8 @@ export function HeroSection({ onPressGoogle }: HeroProps) {
       </StaggerItem>
 
       {/* Micro-copy */}
-      <StaggerItem index={4} style={{ width: '100%', alignItems: 'center' }}>
-        <Text style={{ fontSize: 12, color: LegacyUI.fg40, textAlign: 'center', marginTop: 16, fontFamily: 'Manrope_400Regular' }}>
+      <StaggerItem index={5} style={{ width: '100%', alignItems: 'center' }}>
+        <Text style={{ fontSize: 12, color: L.lightGray, textAlign: 'center', marginTop: 16, fontFamily: 'Manrope_400Regular' }}>
           By continuing you agree to our Terms & Privacy.
         </Text>
       </StaggerItem>
@@ -125,14 +122,12 @@ export function HeroSection({ onPressGoogle }: HeroProps) {
   );
 }
 
-// ═══════════════════════════════════════════════════════
 //  2. PROBLEM STATEMENT
 //  Left-aligned editorial from here on, short + punchy
-// ═══════════════════════════════════════════════════════
 
 export function ProblemSection() {
   return (
-    <SectionReveal style={[s.sectionPy16, { backgroundColor: '#F9F4EB' }]}>
+    <SectionReveal style={[s.sectionPy16, { backgroundColor: L.background }]}>
       <StaggerItem index={0}><SectionLabel style={{ marginBottom: 12 }}>THE PROBLEM</SectionLabel></StaggerItem>
       <StaggerItem index={1}><Text style={[s.h1, { marginBottom: 16 }]}>The biggest decisions are often made with the least reliable information.</Text></StaggerItem>
       <StaggerItem index={2}><Text style={s.body}>People jump between LinkedIn, Reddit, YouTube, blogs, and AI assistants for important decisions. Every platform shows a different fragment — achievements, opinions, stories — but never the whole journey.</Text></StaggerItem>
@@ -143,10 +138,8 @@ export function ProblemSection() {
   );
 }
 
-// ═══════════════════════════════════════════════════════
 //  3. COMPARISON (Fragmented → Unified)
 //  Horizontal scroll of fragment cards → "+" → unified card
-// ═══════════════════════════════════════════════════════
 
 const PLATFORMS = [
   { icon: 'share-variant-outline' as const, name: 'LinkedIn', tag: 'Achievements' },
@@ -183,7 +176,7 @@ function SwingingPlusBadge() {
           width: 48,
           height: 48,
           borderRadius: 24,
-          backgroundColor: LegacyUI.accentSoft,
+          backgroundColor: '#F9F4EB',
           alignItems: 'center',
           justifyContent: 'center',
         },
@@ -197,9 +190,9 @@ function SwingingPlusBadge() {
 
 export function ComparisonSection() {
   return (
-    <SectionReveal style={[s.sectionPy16, { backgroundColor: '#F2F4F7' }]}>
+    <SectionReveal style={[s.sectionPy16, { backgroundColor: L.background }]}>
       <StaggerItem index={0}>
-        <Text style={[s.h1, { marginBottom: 24 }]}>
+        <Text style={[s.h2, { marginBottom: 24 }]}>
           Every platform shows a piece.{"\n"}PathFinder shows the whole picture.
         </Text>
       </StaggerItem>
@@ -234,11 +227,11 @@ export function ComparisonSection() {
         <View style={{ backgroundColor: LegacyUI.accent, borderRadius: 24, padding: 24 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
             <MaterialCommunityIcons name="shield-check" size={24} color="#FFFFFF" />
-            <Text style={{ fontSize: 20, color: '#FFFFFF', marginLeft: 10, fontFamily: 'InstrumentSerif_400Regular', marginTop: 2 }}>Verified Journeys</Text>
+            <Text style={{ fontSize: 18, color: L.surface, marginLeft: 10, fontFamily: 'Manrope_600SemiBold', marginTop: 2 }}>Verified Journeys</Text>
           </View>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
             {JOURNEY_TAGS.map((tag, i) => (
-              <View key={i} style={{ backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 }}>
+              <View key={i} style={{ backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)' }}>
                 <Text style={{ fontSize: 13, color: '#FFFFFF', fontFamily: 'Manrope_500Medium' }}>{tag}</Text>
               </View>
             ))}
@@ -258,10 +251,8 @@ export function ComparisonSection() {
   );
 }
 
-// ═══════════════════════════════════════════════════════
 //  4. JOURNEY SEQUENCE (Timeline)
 //  White card feel, vertical timeline, teal/terracotta/sand dots
-// ═══════════════════════════════════════════════════════
 
 const TIMELINE = [
   { label: 'College', caption: '"Chose projects over grades."', color: LegacyUI.accentSoft, dot: LegacyUI.accent },
@@ -277,7 +268,7 @@ export function JourneySequenceSection() {
     <SectionReveal style={[s.sectionPy16, { backgroundColor: '#E8F3EE' }]}>
       <View style={{ backgroundColor: LegacyUI.surface, borderRadius: 24, paddingHorizontal: 24, paddingVertical: 40, borderWidth: 1, borderColor: LegacyUI.fg08 }}>
         <StaggerItem index={0}>
-          <Text style={[s.h1, { marginBottom: 40 }]}>
+          <Text style={[s.h1, { fontSize: 24, lineHeight: 30, marginBottom: 40 }]}>
             Success isn't a moment.{'\n'}It's a sequence of decisions.
           </Text>
         </StaggerItem>
@@ -311,10 +302,8 @@ export function JourneySequenceSection() {
   );
 }
 
-// ═══════════════════════════════════════════════════════
 //  5. SAMPLE QUESTIONS
 //  Single-column question cards with chevron affordance
-// ═══════════════════════════════════════════════════════
 
 const QUESTIONS = [
   "How did students prepare for Google internships?",
@@ -326,8 +315,8 @@ const QUESTIONS = [
 
 export function SampleQuestionsSection() {
   return (
-    <SectionReveal style={[s.sectionPy16, { backgroundColor: '#FFF5EB' }]}>
-      <StaggerItem index={0}><Text style={[s.h1, { marginBottom: 24 }]}>Ask questions that matter.</Text></StaggerItem>
+    <SectionReveal style={[s.sectionPy16, { backgroundColor: L.background }]}>
+      <StaggerItem index={0}><Text style={[s.h1, { fontSize: 24, lineHeight: 30, marginBottom: 24 }]}>Ask questions that matter.</Text></StaggerItem>
       <StaggerItem index={1} style={{ gap: 12 }}>
         <View style={{ gap: 12 }}>
           {QUESTIONS.map((q, i) => (
@@ -348,10 +337,8 @@ export function SampleQuestionsSection() {
   );
 }
 
-// ═══════════════════════════════════════════════════════
 //  6. HOW IT WORKS (AI)
 //  bg accentSoft zone, 3-step horizontal mini-diagram
-// ═══════════════════════════════════════════════════════
 
 const STEPS = [
   { icon: 'help-circle' as const, label: 'Ask' },
@@ -361,9 +348,9 @@ const STEPS = [
 
 export function HowItWorksSection() {
   return (
-    <SectionReveal style={[s.sectionPy16, { backgroundColor: '#F6F2EC' }]}>
-      <StaggerItem index={0}><SectionLabel style={{ marginBottom: 12 }}>HOW IT WORKS</SectionLabel></StaggerItem>
-      <StaggerItem index={1}><Text style={[s.h1, { marginBottom: 16 }]}>Powered by journeys, not assumptions.</Text></StaggerItem>
+    <SectionReveal style={[s.sectionPy16, { backgroundColor: L.tealTint }]}>
+      <StaggerItem index={0}><SectionLabel color={L.teal} style={{ marginBottom: 12 }}>HOW IT WORKS</SectionLabel></StaggerItem>
+      <StaggerItem index={1}><Text style={[s.h1, { fontSize: 24, lineHeight: 30, marginBottom: 16 }]}>Powered by journeys, not assumptions.</Text></StaggerItem>
       <StaggerItem index={2}>
         <Text style={[s.body, { marginBottom: 20 }]}>
           Unlike standard AI that scrapes static data, PathFinder understands the nuance of real-world paths. Every question you ask triggers a search through a massive knowledge graph built from authentic human experiences.
@@ -383,7 +370,7 @@ export function HowItWorksSection() {
               <View style={{ alignItems: 'center', width: 92 }}>
                 <View style={{
                   width: 52, height: 52, borderRadius: 26,
-                  backgroundColor: LegacyUI.accent,
+                  backgroundColor: L.teal,
                   alignItems: 'center', justifyContent: 'center', marginBottom: 12,
                 }}>
                   <Feather name={step.icon as any} size={22} color="#FFFFFF" />
@@ -403,56 +390,67 @@ export function HowItWorksSection() {
   );
 }
 
-// ═══════════════════════════════════════════════════════
 //  7. VERIFICATION & TRUST
 //  Simple section with shield badge
-// ═══════════════════════════════════════════════════════
 
 export function VerificationSection() {
   return (
     <SectionReveal style={[s.sectionPy16, { backgroundColor: L.tealTint }]}>
-      <View style={{ alignItems: 'center', zIndex: 1 }}>
-        <StaggerItem index={0}>
-          <SectionLabel color={L.teal} style={{ marginBottom: 16 }}>VERIFICATION</SectionLabel>
-        </StaggerItem>
-        <StaggerItem index={1}>
-          <Text style={[s.h1, { marginBottom: 16, color: L.navy, textAlign: 'center' }]}>Trust begins with authenticity.</Text>
-        </StaggerItem>
-        <StaggerItem index={2}>
-          <Text style={[s.body, { marginBottom: 32, color: L.navySoft, textAlign: 'center', maxWidth: '90%' }]}>
-            People hesitate to share failures or unconventional decisions for fear of judgment, especially on traditional professional networks. PathFinder encourages honest storytelling; verification confirms experiences are genuine — not that someone is "successful."
-          </Text>
-        </StaggerItem>
-        <StaggerItem index={3}>
-          <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: L.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: L.border }}>
-            <Feather name="shield" size={40} color={L.teal} />
+      <StaggerItem index={0}>
+        <SectionLabel color={L.teal} style={{ marginBottom: 16 }}>VERIFICATION</SectionLabel>
+      </StaggerItem>
+      <StaggerItem index={1}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+          <View style={{ width: 36, height: 36, borderRadius: 40, backgroundColor: L.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: L.border,marginRight: 16 }} >
+            <MaterialCommunityIcons name="shield-check" size={30} color={L.teal} />
           </View>
-        </StaggerItem>
-      </View>
+          <Text style={[s.h1, { fontSize: 24, justifyContent:'center',lineHeight: 30, color: L.navy }]}>Trust begins with authenticity.</Text>
+        </View>
+      </StaggerItem>
+      <StaggerItem index={2}>
+        <Text style={[s.body, { marginBottom: 32, color: L.navySoft }]}>
+          People hesitate to share failures or unconventional decisions for fear of judgment, especially on traditional professional networks. PathFinder encourages honest storytelling; verification confirms experiences are genuine — not that someone is "successful."
+        </Text>
+      </StaggerItem>
+      <StaggerItem index={4} style={{ width: '100%', alignItems: 'center' }}>
+        <View
+          style={{width: '90%',maxWidth: 400, backgroundColor: L.background, opacity:0.9, borderWidth: 1, borderColor: L.border,borderRadius: 16, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05,shadowRadius: 8, elevation: 2 }}>
+          {/* Header Row */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+            <MaterialCommunityIcons name="account-check-outline" size={20} color={L.teal} style={{ marginRight: 10 }}/>
+            <Text style={{fontSize: 12, fontFamily: s.h2.fontFamily, color: L.teal, letterSpacing: 0.5, fontWeight: '600'}}>
+              VERIFIED NARRATIVES
+            </Text>
+          </View>
+          {/* Card Content Text */}
+          <Text style={{
+              fontSize: 12, color: L.navySoft, lineHeight: 22, fontFamily: s.body.fontFamily}}>
+            We focus on the validity of the timeline, ensuring that the human behind the journey is real.
+          </Text>
+        </View>
+      </StaggerItem>
     </SectionReveal>
   );
 }
 
-// ═══════════════════════════════════════════════════════
 //  8. COMMUNITY / COLLECTIVE KNOWLEDGE
 //  bg-surface with avatar dots motif
-// ═══════════════════════════════════════════════════════
 
 function GraphMotif() {
   // Warm earth-tone palette that harmonizes with the terracotta-tint (#F5E4DD) bg
   const palette = {
-    center:     '#4A3728',   // Deep espresso brown — warm, rich, premium
+    center: '#4A3728',   // Deep espresso brown — warm, rich, premium
     centerRing: '#F8EDE6',   // Warm cream border for the center
-    pivot:      '#5B7B6A',   // Sage green — earthy, calming
-    entry:      '#D4917A',   // Warm coral-peach — complements terracotta
-    insight:    '#C4A265',   // Golden amber — warm, luminous
-    growth:     '#7BAF96',   // Eucalyptus green — fresh, alive
-    dotBorder:  '#FAF0EA',   // Warm off-white borders on nodes
-    linePivot:  '#8BA89A',   // Muted sage for connector
-    lineEntry:  '#D4917A',   // Coral connector
-    lineInsight:'#D4C19B',   // Sandy connector
-    lineGrowth: '#8BB8A2',   // Green connector
-    labelDark:  '#5A4535',   // Warm dark brown for labels
+    pivot: '#5B7B6A',   // Sage green — earthy, calming
+    entry: '#D4917A',   // Warm coral-peach — complements terracotta
+    insight: '#C4A265',   // Golden amber — warm, luminous
+    growth: '#7B9B82',    // Eucalyptus green — growth and nature
+    dotBorder: '#E6D3C8', // Border for dots
+    linePivot: 'rgba(91, 123, 106, 0.4)',
+    lineEntry: 'rgba(212, 145, 122, 0.4)',
+    lineInsight: 'rgba(196, 162, 101, 0.4)',
+    lineGrowth: 'rgba(123, 155, 130, 0.4)',
+    labelDark: '#5A4535',   // Warm dark brown for labels
   };
 
   return (
@@ -552,13 +550,13 @@ function GraphMotif() {
 export function CommunitySection() {
   return (
     <SectionReveal style={[s.sectionPy16, { backgroundColor: L.terracottaTint }]}>
-      <View style={{ alignItems: 'center', zIndex: 1 }}>
-        <StaggerItem index={0}>
+      <StaggerItem index={0}>
           <SectionLabel color={L.terracotta} style={{ marginBottom: 16 }}>COMMUNITY</SectionLabel>
         </StaggerItem>
         <StaggerItem index={1}>
-          <Text style={[s.h1, { marginBottom: 16, color: L.navy, textAlign: 'center' }]}>Collective knowledge, not social networking.</Text>
+          <Text style={[s.h1, { fontSize:20,marginBottom: 16, color: L.navy }]}>Collective knowledge, not social networking.</Text>
         </StaggerItem>
+      <View style={{ alignItems: 'center', zIndex: 1 }}>
         <StaggerItem index={2}>
           <Text style={[s.body, { marginBottom: 24, color: L.navySoft, textAlign: 'center', maxWidth: '90%' }]}>
             Every contributed journey helps someone else facing similar uncertainty — one founder's pivot helps another avoid the same mistake, one student's internship prep guides hundreds. As more verified journeys are added, the graph gets richer and recommendations get stronger for everyone.
@@ -572,10 +570,8 @@ export function CommunitySection() {
   );
 }
 
-// ═══════════════════════════════════════════════════════
 //  9. ACCESSIBILITY / VOICE & LANGUAGE
 //  Mic ripple badge, language chips, feature cards
-// ═══════════════════════════════════════════════════════
 
 const LANG_CHIPS = ['हिन्दी', 'தமிழ்', 'తెలుగు', 'বাংলা', 'मराठी'];
 
@@ -600,7 +596,7 @@ export function AccessibilitySection() {
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 24 }}>
           {LANG_CHIPS.map((lang, i) => (
             <View key={i} style={{ backgroundColor: LegacyUI.surface, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8, borderWidth: 1, borderColor: LegacyUI.fg08 }}>
-              <Text style={{ fontSize: 13, color: LegacyUI.accent, fontFamily: 'Manrope_700Bold' }}>{lang}</Text>
+              <Text style={{ fontSize: 13, color: '#1E293B', fontFamily: 'Manrope_700Bold' }}>{lang}</Text>
             </View>
           ))}
         </View>
@@ -611,14 +607,14 @@ export function AccessibilitySection() {
         <View style={{ gap: 12 }}>
           <View style={{ backgroundColor: LegacyUI.surface, padding: 20, borderRadius: 16, borderWidth: 1, borderColor: LegacyUI.fg08 }}>
             <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: LegacyUI.accentSoft, alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
-              <Feather name="globe" size={20} color={LegacyUI.accent} />
+              <Feather name="globe" size={20} color=' #1E293B' />
             </View>
             <Text style={[s.h2, { marginBottom: 6 }]}>Native Support</Text>
             <Text style={s.micro}>Switch between languages instantly with perfect semantic translation.</Text>
           </View>
           <View style={{ backgroundColor: LegacyUI.surface, padding: 20, borderRadius: 16, borderWidth: 1, borderColor: LegacyUI.fg08 }}>
             <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: LegacyUI.accentSoft, alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
-              <Feather name="volume-2" size={20} color={LegacyUI.accent} />
+              <Feather name="volume-2" size={20} color=' #1E293B' />
             </View>
             <Text style={[s.h2, { marginBottom: 6 }]}>Read Aloud</Text>
             <Text style={s.micro}>Hear your milestones narrated with human-like, empathetic voice synthesis.</Text>
@@ -629,10 +625,8 @@ export function AccessibilitySection() {
   );
 }
 
-// ═══════════════════════════════════════════════════════
 //  10. CLOSING VISION
 //  bg-surfaceInverse (dark invert), centered, emotional
-// ═══════════════════════════════════════════════════════
 
 export function ClosingVisionSection() {
   return (
@@ -650,12 +644,12 @@ export function ClosingVisionSection() {
       </StaggerItem>
 
       <StaggerItem index={2}>
-        <Text style={{ fontSize: 32, color: '#FFFFFF', textAlign: 'center', lineHeight: 38, marginBottom: 24, maxWidth: '95%', alignSelf: 'center', fontFamily: 'InstrumentSerif_400Regular' }}>
+        <Text style={{ fontSize: 32, color: '#FFFFFF', textAlign: 'center', lineHeight: 38, marginBottom: 24, maxWidth: '95%', alignSelf: 'center', fontFamily: 'InstrumentSerif_400Regular', letterSpacing: 0.5 }}>
           Imagine if every important decision someone made could help another person make theirs.
         </Text>
       </StaggerItem>
       <StaggerItem index={3}>
-        <Text style={{ fontSize: 16, color: 'rgba(255,255,255,0.60)', textAlign: 'center', lineHeight: 26, maxWidth: '90%', alignSelf: 'center', fontFamily: 'Manrope_400Regular' }}>
+        <Text style={{ fontSize: 16, color: 'rgba(255,255,255,0.60)', textAlign: 'center', lineHeight: 26, maxWidth: '95%', alignSelf: 'center', fontFamily: 'Manrope_400Regular', letterSpacing: 0.5 }}>
           PathFinder is building a living repository of verified human journeys — not to tell people what they should do, but to help them understand what others did, why, and what they learned. The more journeys the community contributes, the more valuable it becomes for everyone.
         </Text>
       </StaggerItem>
@@ -670,10 +664,8 @@ export function ClosingVisionSection() {
   );
 }
 
-// ═══════════════════════════════════════════════════════
 //  11. FOOTER
 //  continuous with closing
-// ═══════════════════════════════════════════════════════
 
 export function FooterSection() {
   return (
@@ -688,14 +680,16 @@ export function FooterSection() {
       </StaggerItem>
 
       <StaggerItem index={1}>
-        <Text style={{ fontSize: 24, color: '#FFF', fontFamily: 'InstrumentSerif_400Regular', marginBottom: 8 }}>
-          PathFinder
-        </Text>
+        <Image
+          source={require('../../assets/title-dark.png')}
+          style={{ width: 150, height: 30, borderRadius: 16, marginBottom: 4 }}
+          resizeMode="contain"
+        />
       </StaggerItem>
 
       {/* Mission line */}
       <StaggerItem index={2}>
-        <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.60)', textAlign: 'center', marginBottom: 32, fontFamily: 'Manrope_400Regular' }}>
+        <Text style={{ fontSize: 13, color: L.surface, textAlign: 'center', marginBottom: 32, fontFamily: 'Manrope_400Regular', letterSpacing: 0.5 }}>
           Building collective wisdom through verified journeys.
         </Text>
       </StaggerItem>

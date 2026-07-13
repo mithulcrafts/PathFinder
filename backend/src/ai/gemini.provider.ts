@@ -5,7 +5,7 @@ export class GeminiProvider {
   async generateText(systemPrompt: string,
     userPrompt: string): Promise<string> {
     const model = geminiClient.getGenerativeModel({
-      model: "gemini-2.5-flash",
+      model: "gemini-3.1-flash-lite",
       systemInstruction: systemPrompt,
     });
 
@@ -27,7 +27,7 @@ export class GeminiProvider {
   }): Promise<T> {
     const model =
       geminiClient.getGenerativeModel({
-        model: "gemini-2.5-flash",
+        model: "gemini-3.1-flash-lite",
         systemInstruction: systemPrompt,
 
         generationConfig: {

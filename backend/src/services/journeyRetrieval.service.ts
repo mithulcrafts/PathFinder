@@ -1,14 +1,15 @@
 import { closeSession, getSession } from "./neo4j.service.js";
 
 export interface JourneyExperience {
-    id: string;
-    title: string;
+  id: string;
+  title: string;
 }
 
 export interface RetrievedJourney {
   username: string;
   summary: string;
   expertiseAreas: string[];
+  imageUrl: string | null;
   reputationScore: number;
   experienceIds: string[];
 }
@@ -33,6 +34,7 @@ export async function retrieveJourneys(
         u.username AS username,
         u.summary AS summary,
         u.expertiseAreas AS expertiseAreas,
+        u.imageUrl AS imageUrl,
         u.reputationScore AS reputationScore,
         collect(e.id) AS experienceIds
       `,
@@ -49,6 +51,8 @@ export async function retrieveJourneys(
 
       expertiseAreas:
         (record.get("expertiseAreas") as string[]) ?? [],
+      imageUrl:
+        (record.get("imageUrl") as string) ?? null,
 
       reputationScore:
         (record.get("reputationScore") as number) ?? 0,

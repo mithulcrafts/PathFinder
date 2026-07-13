@@ -1,6 +1,6 @@
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL!;
-
 const DEFAULT_TIMEOUT_MS = 60_000; // 60 seconds to allow for long LLM processing
+import { fetch } from "expo/fetch";
 
 export async function apiFetch<T>(
   endpoint: string,

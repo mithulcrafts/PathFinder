@@ -3,7 +3,7 @@ import { z } from "zod";
 
 const monthYearDateSchema = z
   .string()
-  .regex(/^[A-Za-z]{3} \d{4}$/, "Expected date in MMM YYYY format");
+  .regex(/^(0[1-9]|1[0-2]) \d{4}$/, "Expected date in MM YYYY format");
 
 const isoDateTimeSchema = z
   .string()
@@ -148,14 +148,25 @@ export const journeyTransitionSchema = z
   })
   .strict();
 
-export const submitGoalSchema = z.object({
-  narrative: z.string().trim().min(1),
-  topics: z.array(goalTopicSchema).min(1),
-  subtopics: z.array(goalSubtopicSchema).min(1),
-  status: goalStatusSchema,
-  startDate: monthYearDateSchema,
-  endDate: nullableDateSchema,
-});
+export const submitGoalSchema = z.union([
+  z.object({
+    narrative: z.string().trim().min(1),
+    topics: z.array(goalTopicSchema).min(1),
+    subtopics: z.array(goalSubtopicSchema).min(1),
+    status: goalStatusSchema,
+    startDate: monthYearDateSchema,
+    endDate: nullableDateSchema,
+  }),
+  z.object({
+    title: z.string().trim().min(1),
+    description: z.string().trim().optional(),
+    status: z.string().optional(),
+    topics: z.array(goalTopicSchema).optional(),
+    subtopics: z.array(goalSubtopicSchema).optional(),
+    startDate: monthYearDateSchema.optional(),
+    endDate: nullableDateSchema.optional(),
+  })
+]);
 
 export const submitExperienceSchema = z
   .object({

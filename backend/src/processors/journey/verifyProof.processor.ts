@@ -366,7 +366,7 @@ export async function verifyProof(
     }
 
     const model = geminiClient.getGenerativeModel({
-      model: "gemini-2.5-flash",
+      model: "gemini-3.1-flash-lite",
       systemInstruction: PROOF_VERIFICATION_SYSTEM_PROMPT,
       generationConfig: {
         responseMimeType: "application/json",

@@ -10,7 +10,7 @@ export async function queryController(req: Request, res: Response): Promise<void
     console.log("FILE:", req.file);
     const query = req.body?.query;
     console.log("Resolving query input...");
-    const { query: resolvedQuery, transcribed} = await resolveQueryInput({query, audioFile:req.file});
+    const { query: resolvedQuery, transcribed } = await resolveQueryInput({ query, audioFile: req.file });
     console.log("Resolved query:", resolvedQuery);
 
     console.log("Understanding query...");

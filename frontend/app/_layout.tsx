@@ -1,3 +1,4 @@
+import "react-native-reanimated";
 import "../global.css";
 import { ClerkProvider, ClerkLoaded } from "@clerk/clerk-expo";
 import { Slot } from "expo-router";
@@ -10,9 +11,10 @@ import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } f
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect, useCallback } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import * as Updates from "expo-updates";
 
 // Prevent splash from auto-hiding until fonts are ready
-SplashScreen.preventAutoHideAsync();
+SplashScreen.preventAutoHideAsync().catch(console.warn);
 
 // Token cache implementation for secure storage of session tokens
 const tokenCache = {
@@ -27,7 +29,9 @@ const tokenCache = {
       return item;
     } catch (error) {
       console.warn("SecureStore get item error: ", error);
-      await SecureStore.deleteItemAsync(key);
+      try {
+        await SecureStore.deleteItemAsync(key);
+      } catch (e) { }
       return null;
     }
   },
@@ -40,10 +44,12 @@ const tokenCache = {
   },
 };
 
-const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY || "pk_placeholder";
+const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
-if (!process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY) {
-  console.warn("Missing EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY. Please set it in your .env file.");
+console.log("Using Clerk key:", publishableKey);
+
+if (!publishableKey) {
+  throw new Error("EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY is undefined");
 }
 
 export default function RootLayout() {
@@ -62,9 +68,15 @@ export default function RootLayout() {
     Inter_700Bold,
   });
 
+
+  console.log("Update ID:", Updates.updateId);
+  console.log("Channel:", Updates.channel);
+  console.log("Runtime:", Updates.runtimeVersion);
+  console.log("PK:", process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY);
+
   useEffect(() => {
     if (fontsLoaded) {
-      SplashScreen.hideAsync();
+      SplashScreen.hideAsync().catch(console.warn);
     }
   }, [fontsLoaded]);
 
@@ -81,7 +93,7 @@ export default function RootLayout() {
       <ClerkProvider tokenCache={tokenCache} publishableKey={publishableKey}>
         <ClerkLoaded>
           <View className="flex-1 bg-[#FAF9F6] items-center">
-            <View 
+            <View
               className="flex-1 w-full web:max-w-[480px] web:border-x web:border-[#EAE7E0]"
               style={Platform.OS === 'web' ? { shadowColor: '#152238', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.06, shadowRadius: 20 } : {}}
             >

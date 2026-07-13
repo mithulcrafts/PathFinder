@@ -3,6 +3,7 @@ import {queryUnderstandingSchema,type QueryUnderstanding} from "./querySchema.js
 import { queryJsonSchema } from "./queryJsonSchema.js";
 import {QUERY_UNDERSTANDING_SYSTEM_PROMPT,buildQueryUnderstandingPrompt} from "../../prompts/queryUnderstanding.prompt.js";
 
+
 export async function understandQuery(
   userQuery: string
 ): Promise<QueryUnderstanding> {

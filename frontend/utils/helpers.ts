@@ -78,24 +78,15 @@ export function calculateDuration(startDateStr: string, endDateStr?: string | nu
 
 
 export function formatToMonthYear(dateStr: string | null | undefined): string {
-  if (!dateStr) return 'Present'; // Graceful fallback if endDate is null (Ongoing)
-
-  // Split the YYYY-MM-DD string safely
-  const parts = dateStr.split('-');
-  if (parts.length < 2) return dateStr; // Fallback if the string is malformed
-
+  if (!dateStr) return "Present";
+  const parts = dateStr.split("-");
+  if (parts.length < 2) return dateStr;
   const year = parts[0];
-  const monthIndex = parseInt(parts[1], 10) - 1; // Convert "01" -> 0 index
-
+  const monthIndex = Number(parts[1]) - 1;
   const months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
   ];
-
-  // Return formatted string if month index is valid
-  if (monthIndex >= 0 && monthIndex < 12) {
-    return `${months[monthIndex]} ${year}`;
-  }
-
-  return dateStr;
+  const month = months[monthIndex];
+  return month ? `${month}-${year}` : dateStr;
 }

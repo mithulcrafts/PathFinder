@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "temp-expo-app",
-    "slug": "pathfinder",
+    "name": "PathFinder",
+    "slug": "path-finder",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -12,12 +12,20 @@
     "android": {
       "package": "com.pathfinder.app",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "backgroundColor": "#ffffff",
+        "foregroundImage": "./assets/icon.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -26,20 +34,32 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      "expo-sharing"
+      "expo-sharing",
+      "expo-image-picker",
+      "expo-document-picker",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ],
+      "expo-audio",
+      "expo-asset"
     ],
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "7e31f547-e555-4bfc-b1b2-12da59229c9d"
+        "projectId": "a9308a49-cc35-4e0e-934b-352bc38738bf"
       }
     },
-    "owner": "starboyrohinths-team",
     "runtimeVersion": {
       "policy": "appVersion"
     },
+    "owner": "rohii24",
     "updates": {
-      "url": "https://u.expo.dev/7e31f547-e555-4bfc-b1b2-12da59229c9d"
+      "url": "https://u.expo.dev/a9308a49-cc35-4e0e-934b-352bc38738bf"
     }
   }
 }

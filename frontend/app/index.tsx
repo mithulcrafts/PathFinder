@@ -20,7 +20,7 @@ import {
   ClosingVisionSection,
   FooterSection,
 } from '../components/landing/LandingSections';
-import { FloatingParticles } from '../components/landing/FloatingParticles';
+
 
 export default function LandingPage() {
   return (
@@ -32,10 +32,10 @@ export default function LandingPage() {
 
 function LandingPageContent() {
   const router = useRouter();
-  const { isSignedIn, getToken } = useAuth();
+  const { isLoaded, isSignedIn, getToken } = useAuth();
   const { startOAuthFlow } = useOAuth({ strategy: "oauth_google" });
   const { scrollY, viewportHeight, scrollDirection } = useLandingViewport();
-  
+
   const onScroll = useAnimatedScrollHandler((event) => {
     const nextY = event.contentOffset.y;
     if (nextY > scrollY.value) {
@@ -47,23 +47,26 @@ function LandingPageContent() {
   });
 
   const animatedBgStyle = useAnimatedStyle(() => {
-    return { backgroundColor: UI.background, flex: 1 };
+    return { backgroundColor: UI.surfaceInverse, flex: 1 };
   });
 
   useEffect(() => {
+    if (!isLoaded) return;
     async function initialize() {
-      if (!isSignedIn) return;
+      if (!isSignedIn) {
+        return;
+      }
       const token = await getToken();
-      if (!token) return;  
+      if (!token) return;
       const user = await initializeUser(token);
       if (user.username) {
-        router.replace("/(tabs)");
+        router.replace("/(tabs)/ask");
       } else {
         router.replace("/(tabs)/profile");
       }
     }
     initialize();
-  }, [isSignedIn, getToken, router]);
+  }, [isLoaded, isSignedIn]);
 
   const onPressGoogle = async () => {
     try {
@@ -79,7 +82,7 @@ function LandingPageContent() {
   return (
     <Animated.View style={animatedBgStyle}>
       <SafeAreaView style={{ flex: 1 }}>
-        <StatusBar style="dark" />
+        <StatusBar style="light" />
         <Animated.ScrollView
           style={{ flex: 1 }}
           showsVerticalScrollIndicator={false}
@@ -123,7 +126,6 @@ function LandingPageContent() {
           <FooterSection />
         </Animated.ScrollView>
       </SafeAreaView>
-      <FloatingParticles />
     </Animated.View>
   );
 }

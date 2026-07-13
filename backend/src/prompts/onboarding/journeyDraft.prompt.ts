@@ -12,8 +12,8 @@ Your sole directive is to accurately extract structural milestones from a user's
 - title: Concise, punchy title (5-8 words). (e.g., "Full-Stack Engineer at FinTech Startup")
 - context: Exact narrative facts. Preserve user wording. Do not enrich, expand, or add fluff.
 - timelineSummary: One-sentence timeline description focusing purely on ACTION/WHAT HAPPENED, not what was learned.
-- startDate: Format: "MMM YYYY" (e.g., "Jan 2024").
-- endDate: Format: "MMM YYYY". Omit if ongoing/unmentioned.
+- startDate: Format: "MM YYYY" (e.g., "01 2024").
+- endDate: Format: "MM YYYY". Omit if ongoing/unmentioned.
 - organization: Populate ONLY when a specific, identifiable name is stated (e.g., "Google", "MIT", "HackerEarth"). NEVER use generic terms like "College", "Company", "Startup", "Client". Omit if name isn't given.
 - challengeFaced: The clear friction point, obstacle, or difficulty mentioned.
 - outcome: A concrete, tangible end result (e.g., "Received PPO", "Won 1st Place", "Product Shipped", "Application Rejected"). Do NOT list skills/technologies here. Omit if no structural result occurred.
@@ -38,8 +38,8 @@ Expected Output Extraction Structure:
     "title": "Junior Developer at Stripe",
     "context": "Worked as a junior developer at Stripe starting in June 2023. Handled a project that scaled rapidly.",
     "timelineSummary": "Built core features and managed scaling requirements as a junior developer.",
-    "startDate": "Jun 2023",
-    "endDate": "Aug 2024",
+    "startDate": "06 2023",
+    "endDate": "08 2024",
     "organization": "Stripe",
     "challengeFaced": "Handling complex database locks under peak transaction loads.",
     "outcome": "Successfully shipped the v2 engine.",
@@ -49,8 +49,8 @@ Expected Output Extraction Structure:
     "title": "Founder of FormFlow Micro-SaaS",
     "context": "Quit previous role to build an independent micro-SaaS application called FormFlow. Managed to grow it to a steady income.",
     "timelineSummary": "Founded and scaled FormFlow micro-SaaS from scratch to thousands in recurring revenue.",
-    "startDate": "Aug 2024",
-    "endDate": "Dec 2024",
+    "startDate": "08 2024",
+    "endDate": "12 2024",
     "organization": "FormFlow",
     "challengeFaced": "Finding initial active users to gain early traction.",
     "outcome": "Hit $2k Monthly Recurring Revenue (MRR).",

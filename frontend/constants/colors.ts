@@ -1,9 +1,5 @@
 import { EmotionLabel, NodeType } from '../types/schema';
 
-// ═══════════════════════════════════════════════════════
-//  New UI Design System (runanywhere.ai-inspired)
-//  Use `UI` for all new screens and revamped components.
-// ═══════════════════════════════════════════════════════
 
 export const UI = {
   //  Backgrounds 
@@ -21,11 +17,11 @@ export const UI = {
   fg08:         'rgba(3, 7, 18, 0.08)',
   fg06:         'rgba(3, 7, 18, 0.04)',
 
-  //  Accent (Mint Green / Emerald) 
-  accent:       '#10B981',   // Vibrant emerald green
-  accentEnd:    '#059669',   // For gradients
-  accentTint:   'rgba(16, 185, 129, 0.10)',
-  accentSoft:   'rgba(16, 185, 129, 0.06)',
+  //  Accent (Legendary Orange Gradient) 
+  accent:       '#FF6900',   // Vivid primary orange
+  accentEnd:    '#FF4500',   // For gradients
+  accentTint:   'rgba(255, 105, 0, 0.10)',
+  accentSoft:   'rgba(255, 105, 0, 0.06)',
 
   //  Success 
   success:      '#10B981',
@@ -70,7 +66,7 @@ export const BRAND_COLORS = {
   indigoLight: '#818CF8',
 };
 
-// Landing page design system (DESIGN.md) — kept for backward compat
+// Landing page design system
 export const L = {
   background:     '#FAF9F6',
   surface:        '#FFFFFF',
@@ -82,7 +78,8 @@ export const L = {
   terracottaTint: '#F5E4DD',
   sand:           '#D9C9A8',
   border:         '#EAE7E0',
-  gray:           '#4A5568'
+  gray:           '#4A5568',
+  lightGray:      '#A0AEC0',
 };
 
 export const EMOTION_COLORS: Record<string, { bg: string; text: string }> = {
@@ -111,12 +108,12 @@ export const NODE_BORDER_COLORS: Record<NodeType, string> = {
 };
 
 export const NODE_ICONS: Record<NodeType, string> = {
-  Education:   'book',
-  Job:         'briefcase',
-  Decision:    'git-branch',
-  Failure:     'alert-triangle',
-  Startup:     'rocket',
-  Achievement: 'award',
+  Education:   '🎓',
+  Job:         '💼',
+  Decision:    '◆',
+  Failure:     '⚠️',
+  Startup:     '🚀',
+  Achievement: '⭐',
 };
 
 export function getEmotionStyle(label: EmotionLabel) {
@@ -125,8 +122,8 @@ export function getEmotionStyle(label: EmotionLabel) {
 
 // Fallback categorization for product types
 export const CATEGORY_COLORS = {
-  blue: { iconBg: '#DBEAFE', iconText: '#3B82F6', icon: 'info' },
-  green: { iconBg: '#D1FAE5', iconText: '#10B981', icon: 'briefcase' },
-  purple: { iconBg: '#EDE9FE', iconText: '#8B5CF6', icon: 'cpu' },
-  orange: { iconBg: '#FFEDD5', iconText: '#F97316', icon: 'zap' },
+  blue: { iconBg: '#DBEAFE', iconText: '#3B82F6', icon: '🔧' },
+  green: { iconBg: '#D1FAE5', iconText: '#10B981', icon: '👥' },
+  purple: { iconBg: '#EDE9FE', iconText: '#8B5CF6', icon: '📈' },
+  orange: { iconBg: '#FFEDD5', iconText: '#F97316', icon: '🏪' },
 };
