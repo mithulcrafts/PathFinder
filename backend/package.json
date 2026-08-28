@@ -10,6 +10,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "test:upstash": "tsx src/scripts/testUpstash.ts",
     "test:neo4j": "tsx src/scripts/testNeo4j.ts",
+    "neo4j:keepalive": "tsx src/scripts/neo4jKeepAlive.ts",
     "migrate": "tsx src/scripts/migrate.ts",
     "test:geminiGroq": "tsx src/scripts/testGeminiGroq.ts",
     "upload-seeds": "tsx src/scripts/uploadSeedJourneys.ts",
