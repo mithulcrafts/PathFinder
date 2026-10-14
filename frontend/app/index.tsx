@@ -1,10 +1,10 @@
-import React, { useEffect } from 'react';
-import { SafeAreaView, View, Platform } from 'react-native';
+import { useEffect } from 'react';
+import { SafeAreaView } from 'react-native';
 import { useOAuth, useAuth } from "@clerk/clerk-expo";
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { initializeUser } from '@/services/auth.service';
-import Animated, { useAnimatedScrollHandler, useAnimatedStyle, interpolateColor } from 'react-native-reanimated';
+import { syncUser } from '../api/auth.api';
+import Animated, { useAnimatedScrollHandler, useAnimatedStyle } from 'react-native-reanimated';
 import { UI } from '../constants/colors';
 import { LandingViewportProvider, useLandingViewport } from '../components/landing/landingMotion';
 import {
@@ -58,7 +58,7 @@ function LandingPageContent() {
       }
       const token = await getToken();
       if (!token) return;
-      const user = await initializeUser(token);
+      const user = await syncUser(token);
       if (user.username) {
         router.replace("/(tabs)/ask");
       } else {

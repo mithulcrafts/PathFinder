@@ -1,74 +1,41 @@
-# Backend Run Guide
+# Backend development
 
-From the `backend` folder, run these commands in order:
+Use the current Node.js 22 LTS release (or a newer supported release) and npm 10+. See [local setup](../docs/setup.md) for credentials and database setup.
 
-```bash
-npm install
+From `backend/`:
+
+```sh
+npm ci
 npm run dev
 ```
 
-To run the Upstash test script, use:
+## Local checks
 
-```bash
-npm run test:upstash
-```
-To run the Neo4j connection test script, use:
-
-```bash
-npm run test:neo4j
-```
-To run the Gemini, Groq connection test script, use:
-
-```bash
-npm run test:geminiGroq
-```
-To run the Sarvam connection test script, use:
-
-```bash
-npm run test:sarvam
-```
-To run the journey extraction test script, use:
-
-```bash
-npm run test:journey-extract
-```
-To run the migrate script, use:
-
-```bash
-npm run migrate
+```sh
+npm run typecheck
+npm test
+npm run build
 ```
 
-To upload a seed journey file, use:
+`npm test` runs isolated journey mapping and statistics tests. It does not connect to databases, load AI models, or require service credentials. Typechecking rejects unused local declarations and parameters as well as type errors.
 
-```bash
-npm run upload-seeds <journey-file.json>
-```
+## Integration diagnostics and operations
 
-Example:
+These scripts use the services configured in `.env`; they are not the unit suite.
 
-```bash
-npm run upload-seeds nikhil-kamath.json
-```
+| Command | Purpose |
+| --- | --- |
+| `npm run test:upstash` | Redis connectivity |
+| `npm run test:neo4j` | Neo4j connectivity |
+| `npm run test:geminiGroq` | Gemini and Groq connectivity |
+| `npm run test:query` | Query understanding |
+| `npm run test:voiceQuery` | Voice query processing |
+| `npm run test:audioroute` | Audio request using the retained M4A fixture |
+| `npm run migrate` | Apply `db/constraints.cypher` and `db/indexes.cypher` |
+| `npm run upload-seeds -- nikhil-kamath.json` | Import a file from `db/journeys/` |
+| `npm run generate-embeddings` | Generate and persist experience embeddings |
+| `npm run neo4j:keepalive` | Run the scheduled database health query |
 
-To generate embeddings for all Experience nodes, use:
+Legacy seed files use named-month dates; current validation requires numeric `MM YYYY`. Convert a reviewed copy before importing. See the [history audit](../docs/maintenance/commit-history-audit.md).
 
-```bash
-npm run generate-embeddings
-```
-
-Notes:
-- The script name in `package.json` is `test:upstash`.
-- The Neo4j test script is `test:neo4j`.
-- The Gemini, Groq test script is `test:geminiGroq`.
-- The Sarvam test script is `test:sarvam`.
-- The migration script is `migrate`.
-- The upload seed script is `upload-seeds`.
-- The embeddings script is `generate-embeddings`.
-- `npm run dev` starts the backend in watch mode from `src/server.ts`.
-
-Neo4j file notes:
-- `src/db/constraints.cypher` defines the database constraints needed for unique IDs and lookup fields.
-- `src/db/indexes.cypher` defines the indexes used for full-text, vector, and property lookups.
-- `src/scripts/migrate.ts` runs the Neo4j constraints and indexes scripts, then verifies the database setup.
-- `src/scripts/uploadSeedJourneys.ts` uploads a journey JSON file into Neo4j and creates the graph structure.
-- `src/scripts/generateEmbeddings.ts` generates and stores embeddings for all `Experience` nodes.
+Migration, seed, embedding, and backfill scripts are operational entrypoints even when no application file imports them. Review their target database before use.

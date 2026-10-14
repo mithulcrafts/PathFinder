@@ -3,6 +3,13 @@ import { L } from '../../constants/colors';
 import { View, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
+const TAB_ITEMS = [
+  { name: 'ask', title: 'Ask', icon: 'search' },
+  { name: 'journey', title: 'Journey', icon: 'map' },
+  { name: 'community', title: 'Community', icon: 'users' },
+  { name: 'profile', title: 'Profile', icon: 'user' },
+] as const;
+
 export default function TabLayout() {
   return (
     <Tabs
@@ -30,78 +37,27 @@ export default function TabLayout() {
       }}
     >
 
-      <Tabs.Screen
-        name="ask"
-        options={{
-          title: 'Ask',
-          tabBarIcon: ({ color, focused }) => (
-            <View style={{ alignItems: 'center' }}>
-              {focused && (
-                <View style={{
-                  width: 20, height: 3, borderRadius: 1.5,
-                  backgroundColor: L.teal,
-                  position: 'absolute', top: -8,
-                }} />
-              )}
-              <Feather name="search" size={22} color={color} />
-            </View>
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="journey"
-        options={{
-          title: 'Journey',
-          tabBarIcon: ({ color, focused }) => (
-            <View style={{ alignItems: 'center' }}>
-              {focused && (
-                <View style={{
-                  width: 20, height: 3, borderRadius: 1.5,
-                  backgroundColor: L.teal,
-                  position: 'absolute', top: -8,
-                }} />
-              )}
-              <Feather name="map" size={22} color={color} />
-            </View>
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="community"
-        options={{
-          title: 'Community',
-          tabBarIcon: ({ color, focused }) => (
-            <View style={{ alignItems: 'center' }}>
-              {focused && (
-                <View style={{
-                  width: 20, height: 3, borderRadius: 1.5,
-                  backgroundColor: L.teal,
-                  position: 'absolute', top: -8,
-                }} />
-              )}
-              <Feather name="users" size={22} color={color} />
-            </View>
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: 'Profile',
-          tabBarIcon: ({ color, focused }) => (
-            <View style={{ alignItems: 'center' }}>
-              {focused && (
-                <View style={{
-                  width: 20, height: 3, borderRadius: 1.5,
-                  backgroundColor: L.teal,
-                  position: 'absolute', top: -8,
-                }} />
-              )}
-              <Feather name="user" size={22} color={color} />
-            </View>
-          ),
-        }}
-      />
+      {TAB_ITEMS.map(({ name, title, icon }) => (
+        <Tabs.Screen
+          key={name}
+          name={name}
+          options={{
+            title,
+            tabBarIcon: ({ color, focused }) => (
+              <View style={{ alignItems: 'center' }}>
+                {focused && (
+                  <View style={{
+                    width: 20, height: 3, borderRadius: 1.5,
+                    backgroundColor: L.teal,
+                    position: 'absolute', top: -8,
+                  }} />
+                )}
+                <Feather name={icon} size={22} color={color} />
+              </View>
+            ),
+          }}
+        />
+      ))}
     </Tabs>
   );
 }

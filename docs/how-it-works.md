@@ -1,6 +1,6 @@
 # How PathFinder Works: Step-by-Step Lifecycle
 
-This guide walks through the lifecycle of a user journey on PathFinder—from initial voice onboarding to knowledge graph extraction, verification, querying, and community upvoting.
+This guide walks through the lifecycle of a user journey on PathFinder—from narrative onboarding to knowledge graph extraction, verification, querying, and community upvoting.
 
 ---
 
@@ -16,17 +16,17 @@ This guide walks through the lifecycle of a user journey on PathFinder—from in
 
 ## 2. Conversational Journey Onboarding
 
-Users begin onboarding through a conversational AI interface instead of filling long forms manually. The chatbot asks guided questions about their career or entrepreneurial journey, including goals, experiences, challenges, decisions, and outcomes.
+Users begin onboarding with a prompt asking them to describe their career or entrepreneurial journey, including goals, experiences, challenges, decisions and outcomes. A submitted narrative produces a structured draft for review in editable forms.
 ```
 "I started as a System Engineer at TCS, but I wanted to move into product engineering. Over the next four months I focused on system design, built a distributed error tracking platform, and eventually secured a backend role at Vercel."
 ```
-* **Conversational Context**: Each user response is stored as part of the onboarding session, allowing the AI to ask follow-up questions and gather missing details such as timelines, organizations, skills, and outcomes.
-* **Session Persistence**: The conversation state is maintained in **Upstash Redis**, enabling users to continue onboarding across multiple interactions without losing context.
+* **Conversational Context**: Each submitted message is stored in the onboarding session. The extractor receives only the latest message, not the stored conversation history; the current processor returns a draft rather than an AI follow-up question.
+* **Session Persistence**: **Upstash Redis** retains session history and the latest draft for 24 hours. Storing history does not itself make extraction context-aware.
 
 ---
 
 ## 3. Journey Draft Generation (The Compilation Phase)
-The transcribed text is sent to the **Gemini 3.1 Structured Extractor**.
+The submitted narrative is sent to the **Gemini structured extractor**. Voice input is handled by the separate query endpoint.
 
 * **AI Extraction**: Gemini analyzes the transcript and outputs a structured draft JSON conforming to `journeyDraftSchema`:
   ```json
@@ -53,14 +53,14 @@ The transcribed text is sent to the **Gemini 3.1 Structured Extractor**.
   ```
 * **Draft Verification UI**: The extracted draft is sent to the client. The user reviews the experience cards inside the Expo App form, modifies dates, associates goals, and adds verification links.
 * **Editable Journey Forms**: The generated draft is automatically populated into Goal and Experience forms inside the Expo application. Users can review, modify, or enrich the extracted information before submission.
-* **Proof Attachment**: Users can attach GitHub repositories, PDFs, or images to each experience. These proofs are later verified before the journey is persisted in Neo4j AuraDB.
+* **Proof Attachment**: Users can add GitHub, PDF or image proof metadata. The current multipart endpoint accepts one uploaded file named `proof`; it does not accept independent uploaded files for every proof. Verification happens before experiences are persisted in Neo4j.
 
 ---
 
 ## 4. Graph Construction (The Neo4j Write Phase)
 Once the user reviews the generated draft and submits it, the backend validates the data, verifies attached proofs, and persists the journey as a connected knowledge graph in Neo4j AuraDB.
 
-* **Graph Construction**: Users, Goals, Experiences, Skills, Proofs, and Decisions are stored as independent nodes connected through typed relationships such as `HAS_EXPERIENCE`, `PURSUED_GOAL`, `BUILT_SKILL`, `HAS_PROOF`, and `TRANSITION`.
+* **Graph Construction**: Users, Goals, Experiences, Skills and Proofs are stored as nodes connected through `HAS_GOAL`, `HAS_EXPERIENCE`, `CONTRIBUTED_TO`, `BUILT_SKILL`, `HAS_PROOF` and `TRANSITION`. Decisions are labels on transition relationships.
 
   ```cypher
   MATCH (u:User {clerkId: $clerkId})
@@ -74,7 +74,7 @@ Once the user reviews the generated draft and submits it, the backend validates 
   CREATE (g:Goal {id: $goalId})
 
   CREATE (u)-[:HAS_EXPERIENCE]->(e)
-  CREATE (e)-[:PURSUED_GOAL]->(g)
+  CREATE (e)-[:CONTRIBUTED_TO]->(g)
   ```
 
 * **Decision Transitions**: Rather than relying solely on chronological ordering, the backend infers meaningful transitions between experiences. Each transition captures the decision that caused the career move and is stored as a `TRANSITION` relationship.
@@ -172,4 +172,4 @@ Q --> R
   MATCH (u:User {clerkId: $clerkId}), (e:Experience {id: $expId})
   MERGE (u)-[:UPVOTED]->(e)
   ```
-* **Interactive Exploration**: Users can open any public profile to interact with the Cytoscape graph canvas, click on nodes to inspect verification files, and download the graph as an image.
+* **Interactive Exploration**: Users can open any public profile to interact with the Cytoscape graph canvas, click on nodes to inspect experience details, and share profile links. The personal Journey tab also supports graph image export.

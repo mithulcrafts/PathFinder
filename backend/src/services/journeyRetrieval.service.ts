@@ -1,10 +1,5 @@
 import { closeSession, getSession } from "./neo4j.service.js";
 
-export interface JourneyExperience {
-  id: string;
-  title: string;
-}
-
 export interface RetrievedJourney {
   username: string;
   summary: string;

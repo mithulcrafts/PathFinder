@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Image, Linking, useWindowDimensions, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Image, Linking, useWindowDimensions } from 'react-native';
 import { MaterialCommunityIcons, MaterialIcons, Feather } from '@expo/vector-icons';
 import Animated, {
   Easing,
@@ -19,7 +19,6 @@ const LegacyUI = {
   accentTint: 'rgba(255, 105, 0, 0.10)',
   accentSoft: 'rgba(255, 105, 0, 0.06)'
 };
-import { GradientButton } from '../ui/GradientButton';
 import { SectionLabel, PillBadge } from '../ui/SectionLabel';
 
 import Svg, { Path } from 'react-native-svg';

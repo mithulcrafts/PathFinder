@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { View, Dimensions } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -9,18 +9,14 @@ import Animated, {
   Easing,
   withDelay,
 } from 'react-native-reanimated';
-import { UI } from '../../constants/colors';
 
 const { width } = Dimensions.get('window');
 const PARTICLE_COUNT = 30;
 
-function Bubble({ index }: { index: number }) {
+function Bubble() {
   const size = 15 + Math.random() * 45; // Bubbles between 15px and 60px
   const randomX = Math.random() * width;
   const startY = Math.random() * 800;
-  
-  // All bubbles should be white
-  const isOrange = false;
   
   const translateY = useSharedValue(startY);
   const translateX = useSharedValue(0);
@@ -62,7 +58,7 @@ function Bubble({ index }: { index: number }) {
       delay,
       withRepeat(
         withSequence(
-          withTiming(isOrange ? 0.35 : 0.15, { duration: duration / 2, easing: Easing.ease }),
+          withTiming(0.15, { duration: duration / 2, easing: Easing.ease }),
           withTiming(0.02, { duration: duration / 2, easing: Easing.ease })
         ),
         -1,
@@ -89,7 +85,7 @@ function Bubble({ index }: { index: number }) {
           width: size,
           height: size,
           borderRadius: size / 2,
-          backgroundColor: isOrange ? UI.accent : '#FFFFFF',
+          backgroundColor: '#FFFFFF',
           zIndex: 0,
         },
         animatedStyle,
@@ -102,7 +98,7 @@ export function FloatingParticles() {
   return (
     <View style={{ position: 'absolute', width: '100%', height: '100%', overflow: 'hidden', zIndex: 0 }} pointerEvents="none">
       {Array.from({ length: PARTICLE_COUNT }).map((_, i) => (
-        <Bubble key={i} index={i} />
+        <Bubble key={i} />
       ))}
     </View>
   );

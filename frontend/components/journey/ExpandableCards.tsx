@@ -1,12 +1,16 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, LayoutAnimation } from 'react-native';
+import { useState } from 'react';
+import { View, Text, TouchableOpacity, LayoutAnimation, Platform, UIManager } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { L } from '@/constants/colors';
+import { L } from '../../constants/colors';
+
+// Enable LayoutAnimation for Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 export interface ExpandableGoalCardProps {
   title: string;
   badgeText?: string;
-  badgeColor?: { bg: string; text: string };
   description: string;
   topics?: string[];
   subtopics?: string[];
@@ -16,7 +20,6 @@ export interface ExpandableGoalCardProps {
 export function ExpandableGoalCard({
   title,
   badgeText,
-  badgeColor,
   description,
   topics = [],
   subtopics = [],

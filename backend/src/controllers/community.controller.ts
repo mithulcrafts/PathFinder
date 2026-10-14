@@ -97,13 +97,8 @@ export async function getFeedController(
   res: Response
 ): Promise<void> {
   try {
-    // Check for userId in the authenticated request (if using Clerk Middleware)
-    // We assume req.auth might be attached, or we pass userId as query param for simplicity
-    const authHeader = req.headers.authorization;
     let userId = undefined;
     
-    // In our backend, clerk auth attaches req.auth.userId but Express Request type might not have it unless extended.
-    // We'll safely check req.auth
     const auth = (req as any).auth;
     if (auth && auth.userId) {
       userId = auth.userId;

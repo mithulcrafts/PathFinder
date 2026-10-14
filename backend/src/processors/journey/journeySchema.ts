@@ -1,4 +1,3 @@
-import e from "express";
 import { z } from "zod";
 
 const monthYearDateSchema = z
@@ -255,7 +254,6 @@ export const journeyJsonSchema = z
       }
     });
   });
-export type journeyGoalSchema = z.infer<typeof journeyGoalSchema>;
 export type JourneyExperience = z.infer<typeof journeyExperienceSchema>;
 export type SubmitGoal = z.infer<typeof submitGoalSchema>;
 export type JourneyTransition = z.infer<typeof journeyTransitionSchema>;

@@ -6,24 +6,11 @@ import { resolveQueryInput } from "../processors/speech/resolveQueryInput.proces
 
 export async function queryController(req: Request, res: Response): Promise<void> {
   try {
-    console.log("BODY:", req.body);
-    console.log("FILE:", req.file);
     const query = req.body?.query;
-    console.log("Resolving query input...");
     const { query: resolvedQuery, transcribed } = await resolveQueryInput({ query, audioFile: req.file });
-    console.log("Resolved query:", resolvedQuery);
-
-    console.log("Understanding query...");
     const structuredQuery = await understandQuery(resolvedQuery);
-    console.log("Structured query:", structuredQuery);
-
-    console.log("Retrieving context...");
     const context = await retrieveContext(structuredQuery);
-    console.log("Retrieved context successfully");
-
-    console.log("Aggregating context...");
     const aggregatedContext = await aggregateContext(resolvedQuery, structuredQuery, context);
-    console.log("Aggregated context successfully");
 
     res.json({
       query: resolvedQuery,

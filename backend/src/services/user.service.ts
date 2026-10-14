@@ -1,6 +1,7 @@
 import type { JourneyExperience, JourneyTransition } from "../processors/journey/journeySchema.js";
 import type { JourneyGoal } from "../types/journey/Journey.types.js";
 import { closeSession, getSession } from "./neo4j.service.js";
+import { attachExperienceGoals, mapJourneyExperience, mapJourneyGoal, mapJourneyTransition } from "./journeyMapping.js";
 
 export interface UpdateProfileInput {
   clerkId: string;
@@ -133,19 +134,7 @@ export async function getUserJourney(
       { clerkId }
     );
 
-    const goals = goalsResult.records.map((record) => {
-      const goal = record.get("g");
-      return {
-        id: goal.properties.id,
-        title: goal.properties.title,
-        description: goal.properties.description,
-        status: goal.properties.status,
-        topics: goal.properties.topics,
-        subtopics: goal.properties.subtopics,
-        startDate: goal.properties.startDate.toString(),
-        endDate: goal.properties.endDate ? goal.properties.endDate.toString() : null,
-      };
-    }) satisfies JourneyGoal[];
+    const goals = goalsResult.records.map(mapJourneyGoal);
     const experiencesResult = await session.run(
       `
       MATCH (u:User {clerkId: $clerkId})-[:HAS_EXPERIENCE]->(e:Experience)
@@ -155,30 +144,7 @@ export async function getUserJourney(
       { clerkId }
     );
 
-    const experiences = experiencesResult.records.map((record) => {
-      const experience = record.get("e").properties;
-      const skillNodes = record.get("skills") as any[];
-
-      return {
-        id: experience.id,
-        title: experience.title,
-        startDate: experience.startDate.toString(),
-        endDate: experience.endDate ? experience.endDate.toString() : null,
-        context: experience.context,
-        challengeFaced: experience.challengeFaced ?? null,
-        outcome: experience.outcome ?? null,
-        organization: experience.organization ?? null,
-        applicationStatus: experience.applicationStatus ?? null,
-        achievements: experience.achievements ?? null,
-        isVerified: experience.isVerified ?? false,
-        timelineSummary: experience.timelineSummary,
-        goalIds: [] as string[], // Populated in the map below
-        skills: skillNodes.filter(Boolean).map((skill) => ({
-          name: skill.properties.name,
-          type: skill.properties.type,
-        })),
-      };
-    });
+    const experiences = experiencesResult.records.map(mapJourneyExperience);
     const goalRelationshipResult = await session.run(
       `
       MATCH (u:User {clerkId: $clerkId})-[:HAS_EXPERIENCE]->(e:Experience)-[:CONTRIBUTED_TO]->(g:Goal)
@@ -187,14 +153,7 @@ export async function getUserJourney(
       { clerkId }
     );
 
-    const goalMap = new Map<string, string[]>();
-    for (const rec of goalRelationshipResult.records) {
-      goalMap.set(rec.get("experienceId"), rec.get("goalIds"));
-    }
-
-    experiences.forEach((exp) => {
-      exp.goalIds = goalMap.get(exp.id) ?? [];
-    });
+    attachExperienceGoals(experiences, goalRelationshipResult.records);
 
     const transitionsResult = await session.run(
       `
@@ -204,11 +163,7 @@ export async function getUserJourney(
       { clerkId }
     );
 
-    const transitions = transitionsResult.records.map((record) => ({
-      fromExperienceId: record.get("fromExperienceId") as string,
-      toExperienceId: record.get("toExperienceId") as string,
-      decisionLabel: record.get("decisionLabel") as string,
-    })) satisfies JourneyTransition[];
+    const transitions = transitionsResult.records.map(mapJourneyTransition);
 
     return {
       username,

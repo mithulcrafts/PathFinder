@@ -4,7 +4,7 @@
 //
 //  add to package.json scripts:
 //
-// Always run migrate before seed.ts.
+// Always run migrate before upload-seeds.
 // After running, verify in Neo4j Browser or AuraDB Query tab:
 //   SHOW CONSTRAINTS
 //   SHOW INDEXES
@@ -222,7 +222,7 @@ async function migrate(): Promise<void> {
         // Must run before indexes because some index types require
         // the uniqueness constraints to exist first.
 
-        const constraintsPath = resolve(__dirname, '../db/constraints.cypher')
+        const constraintsPath = resolve(__dirname, '../../db/constraints.cypher')
         console.log(`Reading constraints from: ${constraintsPath}`)
 
         const constraintsContent = await readFile(constraintsPath, 'utf-8')
@@ -236,7 +236,7 @@ async function migrate(): Promise<void> {
         // defined — it will be populated during seeding and
         // onboarding but the index can be created before data exists.
 
-        const indexesPath = resolve(__dirname, '../db/indexes.cypher')
+        const indexesPath = resolve(__dirname, '../../db/indexes.cypher')
         console.log(`Reading indexes from: ${indexesPath}`)
 
         const indexesContent = await readFile(indexesPath, 'utf-8')
@@ -250,7 +250,7 @@ async function migrate(): Promise<void> {
 
         console.log('================================================')
         console.log('Migration completed successfully.')
-        console.log('You can now run: npm run seed')
+        console.log('You can now run: npm run upload-seeds -- <journey-file.json>')
         console.log('================================================')
 
     } catch (error) {

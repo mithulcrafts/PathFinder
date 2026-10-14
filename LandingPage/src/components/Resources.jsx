@@ -47,7 +47,7 @@ export default function Resources() {
       <div className="section-header">
         <h2 className="section-title">Project <span className="accent">Resources</span></h2>
         <p className="section-subtitle">
-          Access codebases, hackathon presentation materials, video demos, and detailed engineering write-ups.
+          Explore the source code, product presentations, video demos, and engineering write-ups.
         </p>
       </div>
 

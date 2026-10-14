@@ -1,25 +1,9 @@
 import "../config/env.js";
 
 import { closeNeo4jConnection } from "../config/neo4j.config.js";
-import { generateExperienceEmbedding, generateGoalEmbedding } from "../processors/journey/generateEmbeddings.processor.js";
+import { generateExperienceEmbedding, generateGoalEmbedding, type ExperienceEmbeddingInput as ExperienceRecord, type GoalEmbeddingInput as GoalRecord } from "../processors/journey/generateEmbeddings.processor.js";
 import { initializeEmbeddingModel } from "../services/embeddings.service.js";
 import { closeSession, getSession } from "../services/neo4j.service.js";
-
-interface ExperienceRecord {
-  id: string;
-  title: string;
-  context: string;
-  challengeFaced?: string | null;
-  outcome?: string | null;
-  achievements?: string[] | null;
-  skills?: string[];
-}
-
-interface GoalRecord {
-  id: string;
-  title: string;
-  description: string;
-}
 
 async function fetchExperiences(): Promise<ExperienceRecord[]> {
   const session = getSession();

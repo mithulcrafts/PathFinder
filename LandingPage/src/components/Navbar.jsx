@@ -1,8 +1,8 @@
 import React from 'react';
+import { scrollToSection } from '../utils/navigation';
 
 export default function Navbar({
-  brandName = "PathFinder",
-  cta = { label: "Download APK ↗", href: "#try-pathfinder" }
+  brandName = "PathFinder"
 }) {
   const links = [
     { label: "Try PathFinder", href: "#try-pathfinder", action: "scroll" },
@@ -17,21 +17,9 @@ export default function Navbar({
     }
   ];
 
-  const handleBrandClick = (e) => {
-    e.preventDefault();
-    const heroEl = document.getElementById('hero');
-    if (heroEl) {
-      heroEl.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
-
   const handleLinkClick = (e, link) => {
     if (link.action === "scroll") {
-      e.preventDefault();
-      const el = document.getElementById(link.href.replace('#', ''));
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth' });
-      }
+      scrollToSection(e, link.href.replace('#', ''));
     } else if (link.action === "link") {
       e.preventDefault();
       window.open(link.href, '_blank', 'noopener,noreferrer');
@@ -40,7 +28,7 @@ export default function Navbar({
 
   return (
     <nav>
-      <div className="brand" onClick={handleBrandClick} style={{ cursor: 'pointer' }}>
+      <div className="brand" onClick={(e) => scrollToSection(e, 'hero')} style={{ cursor: 'pointer' }}>
         <span className="brand-word">{brandName}</span>
       </div>
       <div className="nav-links">

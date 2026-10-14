@@ -24,7 +24,7 @@ export default function TeamSection() {
       <div className="section-header">
         <h2 className="section-title">Meet the <span className="accent">Team</span></h2>
         <p className="section-subtitle">
-          The developers, designers, and AI engineers behind the PathFinder platform project built for HackHazards 2026.
+          The developers, designers, and AI engineers behind PathFinder.
         </p>
       </div>
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, SafeAreaView, TextInput, Image, Keyboard } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth, useUser } from '@clerk/clerk-expo';
@@ -206,7 +206,6 @@ export default function ProfilePage() {
                 }}
                 value={username}
                 onChangeText={(text) => {
-                  console.log("Typing:", text);
                   setUsername(text);
                 }}
                 onBlur={handleSaveUsername}

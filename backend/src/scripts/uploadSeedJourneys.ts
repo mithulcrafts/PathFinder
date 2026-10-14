@@ -1,6 +1,6 @@
 import "../config/env.js";
 
-import { readdir, readFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import { basename, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import neo4j from "neo4j-driver";
@@ -12,7 +12,7 @@ import type { JourneyJson } from "../types/journey/Journey.types.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const journeysDir = resolve(__dirname, "../db/journeys");
+const journeysDir = resolve(__dirname, "../../db/journeys");
 
 const verificationQueries = [
   { label: "Users", query: "MATCH (u:User) RETURN count(u) AS total" },
@@ -88,7 +88,7 @@ async function main(): Promise<void> {
     files = [filePath];
   } else {
     throw new Error(
-      "Please provide a journey JSON file. Example: npm run upload-seed-journeys nikhil-kamath.json"
+      "Please provide a journey JSON file. Example: npm run upload-seeds -- nikhil-kamath.json"
     );
   }
 

@@ -14,12 +14,6 @@ export const neo4jDriver: Driver = neo4j.driver(
   )
 );
 
-export async function verifyNeo4jConnection(): Promise<void> {
-  await neo4jDriver.verifyConnectivity();
-
-  console.log("Neo4j connection established");
-}
-
 export async function closeNeo4jConnection(): Promise<void> {
   await neo4jDriver.close();
 

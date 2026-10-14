@@ -1,359 +1,178 @@
-import React, { useMemo, useState, useRef } from 'react';
-import { View, Text, TouchableOpacity, Dimensions, Pressable } from 'react-native';
+import { useMemo, useRef, useState } from 'react';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { PinchGestureHandler, State, ScrollView as GHScrollView } from 'react-native-gesture-handler';
 import { Feather } from '@expo/vector-icons';
-import Svg, { Circle, Line, Text as SvgText, Defs, Marker, Path, G } from 'react-native-svg';
-import { GraphNode, GraphEdge } from '../../api/community.api';
-import { L } from '../../constants/colors';
+import Svg, { Defs, Marker, Path } from 'react-native-svg';
 import { useRouter } from 'expo-router';
+import type { GraphNode, GraphEdge } from '../../api/community.api';
+import { L } from '../../constants/colors';
+import {
+  groupCommunityPaths, layoutCommunityPath, PATH_CARD_WIDTH, PATH_CARD_HEIGHT,
+  type CommunityPath,
+} from '../../utils/communityGraph';
 
-interface VisualGraphProps {
-  nodes: GraphNode[];
-  edges: GraphEdge[];
-}
+const MIN_SCALE = 0.4;
+const MAX_SCALE = 2.5;
+const INITIAL_SCALE = 0.85;
+const clampScale = (value: number) => Math.min(MAX_SCALE, Math.max(MIN_SCALE, value));
 
-interface PositionedNode extends GraphNode {
-  x: number;
-  y: number;
-}
-
-export function VisualGraph({ nodes, edges }: VisualGraphProps) {
+function PathCanvas({ path }: { path: CommunityPath }) {
   const router = useRouter();
-  const [scale, setScale] = useState(0.4);
-  const baseScale = useRef(0.4);
+  const layout = useMemo(() => layoutCommunityPath(path), [path]);
+  const [scale, setScale] = useState(INITIAL_SCALE);
+  const baseScale = useRef(INITIAL_SCALE);
   const scrollViewRef = useRef(null);
-  const screenWidth = Dimensions.get('window').width;
+  const authors = [...new Set(path.nodes.map(node => node.authorUsername).filter(Boolean))];
 
-  const handleZoomIn = () => {
-    const newScale = Math.min(scale + 0.5, 2.5);
-    setScale(newScale);
-    baseScale.current = newScale;
-  };
-  const handleZoomOut = () => {
-    const newScale = Math.max(scale - 0.5, 0.4);
-    setScale(newScale);
-    baseScale.current = newScale;
-  };
-
-  const onPinchEvent = (event: any) => {
-    setScale(Math.max(0.4, Math.min(baseScale.current * event.nativeEvent.scale, 2.5)));
-  };
-
-  const onPinchStateChange = (event: any) => {
-    if (event.nativeEvent.oldState === State.ACTIVE) {
-      baseScale.current = scale;
-    }
-  };
-
-  const { positionedNodes, positionedEdges, width, height } = useMemo(() => {
-    if (nodes.length === 0) return { positionedNodes: [], positionedEdges: [], width: 0, height: 0 };
-
-    const nodeMap = new Map<string, PositionedNode>();
-    nodes.forEach(n => nodeMap.set(n.id, { ...n, x: 0, y: 0 }));
-
-    // Calculate layers (very naive topological sort / distance from sources)
-    const layers = new Map<string, number>();
-    const inDegrees = new Map<string, number>();
-    const adj = new Map<string, string[]>();
-
-    nodes.forEach(n => {
-      inDegrees.set(n.id, 0);
-      adj.set(n.id, []);
-    });
-
-    edges.forEach(e => {
-      if (inDegrees.has(e.toId)) {
-        inDegrees.set(e.toId, inDegrees.get(e.toId)! + 1);
-      }
-      if (adj.has(e.fromId)) {
-        adj.get(e.fromId)!.push(e.toId);
-      }
-    });
-
-    // Assign layers
-    let currentLayer = 0;
-    let queue = nodes.filter(n => inDegrees.get(n.id) === 0).map(n => n.id);
-
-    // Fallback if there are cycles and no sources
-    if (queue.length === 0 && nodes.length > 0) {
-      queue = [nodes[0].id];
-    }
-
-    const visited = new Set<string>();
-
-    while (queue.length > 0) {
-      const nextQueue: string[] = [];
-      for (const id of queue) {
-        if (!visited.has(id)) {
-          visited.add(id);
-          layers.set(id, currentLayer);
-          const neighbors = adj.get(id) || [];
-          for (const n of neighbors) {
-            nextQueue.push(n);
-          }
-        }
-      }
-      queue = nextQueue;
-      currentLayer++;
-    }
-
-    // Any unvisited nodes (disconnected components or cyclic) spread across 3 layers to prevent extreme vertical height
-    let unvisitedIndex = 0;
-    nodes.forEach(n => {
-      if (!visited.has(n.id)) {
-        layers.set(n.id, unvisitedIndex % 3);
-        unvisitedIndex++;
-      }
-    });
-
-    const maxLayerOriginal = Math.max(0, ...Array.from(layers.values()));
-    
-    const nodesPerLayerOriginal = new Map<number, string[]>();
-    for (let i = 0; i <= maxLayerOriginal; i++) {
-      nodesPerLayerOriginal.set(i, []);
-    }
-    
-    Array.from(layers.entries()).forEach(([id, layer]) => {
-      nodesPerLayerOriginal.get(layer)!.push(id);
-    });
-
-    // CRITICAL: Limit nodes per vertical layer to prevent Android Canvas OOM crash
-    const MAX_NODES_PER_LAYER = 6;
-    const balancedLayers: string[][] = [];
-    
-    for (let i = 0; i <= maxLayerOriginal; i++) {
-      const arr = nodesPerLayerOriginal.get(i) || [];
-      if (arr.length === 0 && balancedLayers.length > 0) {
-        balancedLayers.push([]);
-        continue;
-      }
-      for (let j = 0; j < arr.length; j += MAX_NODES_PER_LAYER) {
-        balancedLayers.push(arr.slice(j, j + MAX_NODES_PER_LAYER));
-      }
-    }
-
-    const X_SPACING = 280;
-    const Y_SPACING = 200;
-    const padding = 80;
-
-    const actualMaxLayer = Math.max(0, balancedLayers.length - 1);
-    
-    let maxNodesInOneLayer = 0;
-    balancedLayers.forEach(layerNodes => {
-      maxNodesInOneLayer = Math.max(maxNodesInOneLayer, layerNodes.length);
-    });
-
-    const calculatedHeight = Math.max(300, maxNodesInOneLayer * Y_SPACING + padding * 2);
-    const calculatedWidth = actualMaxLayer * X_SPACING + padding * 2 + 150; 
-
-    // Position nodes
-    balancedLayers.forEach((layerNodes, i) => {
-      layerNodes.forEach((id, index) => {
-        const pNode = nodeMap.get(id)!;
-        pNode.x = padding + i * X_SPACING + 75; // center offset
-        
-        const layerHeight = layerNodes.length * Y_SPACING;
-        const startY = (calculatedHeight - layerHeight) / 2 + Y_SPACING / 2;
-        pNode.y = startY + index * Y_SPACING;
-      });
-    });
-
-    // Filter out edges with missing nodes
-    const validEdges = edges.filter(e => nodeMap.has(e.fromId) && nodeMap.has(e.toId));
-
-    return {
-      positionedNodes: Array.from(nodeMap.values()),
-      positionedEdges: validEdges.map(e => ({
-        ...e,
-        from: nodeMap.get(e.fromId)!,
-        to: nodeMap.get(e.toId)!
-      })),
-      width: Math.max(Dimensions.get('window').width, calculatedWidth),
-      height: calculatedHeight
-    };
-  }, [nodes, edges]);
-
-  if (nodes.length === 0) {
-    return (
-      <View style={{ padding: 20, alignItems: 'center', backgroundColor: L.surface, borderRadius: 16, marginHorizontal: 16 }}>
-        <Text style={{ color: L.navySoft, fontFamily: 'Inter_400Regular' }}>No trending paths found.</Text>
-      </View>
-    );
-  }
-
-  const handleNodePress = (authorUsername: string) => {
-    router.push(`/u/${authorUsername}`);
-  };
-
-  const drawCurve = (x1: number, y1: number, x2: number, y2: number) => {
-    const cp1x = x1 + (x2 - x1) / 2;
-    const cp1y = y1;
-    const cp2x = x1 + (x2 - x1) / 2;
-    const cp2y = y2;
-    return `M ${x1} ${y1} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${x2} ${y2}`;
-  };
-
-  const drawSelfLoop = (x: number, y: number) => {
-    const cardTopLeftX = x - 90;
-    const cardTopLeftY = y - 32;
-    const startX = cardTopLeftX + 45;
-    const startY = cardTopLeftY;
-    const cp1x = startX - 25;
-    const cp1y = startY - 40;
-    const cp2x = startX + 25;
-    const cp2y = startY - 40;
-    const endX = startX + 25;
-    const endY = startY;
-    return `M ${startX} ${startY} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${endX} ${endY}`;
+  const zoom = (value: number) => {
+    const next = clampScale(value);
+    baseScale.current = next;
+    setScale(next);
   };
 
   return (
-    <PinchGestureHandler onGestureEvent={onPinchEvent} onHandlerStateChange={onPinchStateChange} simultaneousHandlers={scrollViewRef}>
-      <View style={{ marginVertical: 16, height: height * scale, width: screenWidth, overflow: 'visible' }}>
-        <GHScrollView 
-          ref={scrollViewRef}
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          maximumZoomScale={2.5}
-          minimumZoomScale={0.4}
-          contentContainerStyle={{ width: width * scale, height: height * scale }}
-          nestedScrollEnabled={true}
-          decelerationRate="fast"
-          scrollEventThrottle={16}
-        >
-          <View style={{ 
-            backgroundColor: '#FDFCF9', 
-            width, 
-            height,
-            transform: [{ scale }],
-            transformOrigin: 'top left'
-          }}>
-        <Svg width={width} height={height} style={{ position: 'absolute', top: 0, left: 0 }}>
-          <Defs>
-            <Marker
-              id="arrow"
-              viewBox="0 0 10 10"
-              refX="10"
-              refY="5"
-              markerWidth="5"
-              markerHeight="5"
-              orient="auto"
-            >
-              <Path d="M 0 0 L 10 5 L 0 10 z" fill={L.teal} opacity={0.6} />
-            </Marker>
-          </Defs>
-
-          {/* Draw Edges */}
-          {positionedEdges.map((edge, i) => {
-            if (edge.fromId === edge.toId) {
-              return (
-                <G key={`edge-${i}`}>
-                  <Path
-                    d={drawSelfLoop(edge.from.x, edge.from.y)}
-                    stroke={L.teal}
-                    strokeOpacity={0.4}
-                    strokeWidth="2"
-                    fill="none"
-                    markerEnd="url(#arrow)"
-                  />
-                </G>
-              );
-            }
-
-            const midX = (edge.from.x + edge.to.x) / 2;
-            const midY = (edge.from.y + edge.to.y) / 2;
-            const startX = edge.from.x + 90;
-            const endX = edge.to.x - 90;
-
-            return (
-              <G key={`edge-${i}`}>
-                <Path
-                  d={drawCurve(startX, edge.from.y, endX, edge.to.y)}
-                  stroke={L.teal}
-                  strokeOpacity={0.4}
-                  strokeWidth="2"
-                  fill="none"
-                  markerEnd="url(#arrow)"
-                />
-              </G>
-            );
-          })}
-        </Svg>
-
-        {/* Node Overlays for interaction and text */}
-        {positionedNodes.map(node => (
-          <TouchableOpacity
-            key={node.id}
-            onPress={() => handleNodePress(node.authorUsername)}
-            activeOpacity={0.8}
-            style={{
-              position: 'absolute',
-              left: node.x - 90,
-              top: node.y - 32,
-              width: 180,
-              minHeight: 74,
-              backgroundColor: '#FFFFFF',
-              borderRadius: 16,
-              borderWidth: 1,
-              borderColor: 'rgba(62, 107, 102, 0.1)',
-              alignItems: 'center',
-              justifyContent: 'center',
-              paddingHorizontal: 12,
-              paddingVertical: 10,
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.05,
-              shadowRadius: 10,
-              elevation: 4,
-            }}
-          >
-            <Text style={{ color: L.navy, fontSize: 13, fontFamily: 'Inter_600SemiBold', textAlign: 'center', marginBottom: 4 }} numberOfLines={2}>
-              {node.title}
-            </Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Text style={{ color: L.teal, fontSize: 11, fontFamily: 'Inter_500Medium' }} numberOfLines={1} ellipsizeMode="tail">
-                {node.authorUsername ? `@${node.authorUsername}` : 'Explorer'}
-              </Text>
-            </View>
-          </TouchableOpacity>
-        ))}
+    <>
+      <View style={styles.pathHeading}>
+        <View style={styles.avatar}>
+          <Feather name="git-branch" size={18} color={L.teal} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.author} numberOfLines={1}>
+            {authors.length === 1 ? `@${authors[0]}` : 'Connected journeys'}
+          </Text>
+          <Text style={styles.metadata}>
+            {path.nodes.length} {path.nodes.length === 1 ? 'experience' : 'experiences'}
+            {' · '}{path.edges.length} {path.edges.length === 1 ? 'connection' : 'connections'}
+          </Text>
+        </View>
       </View>
-        </GHScrollView>
 
-        {/* Floating Zoom Controls */}
-        <View style={{
-          position: 'absolute',
-          bottom: 16,
-          right: 32,
-          flexDirection: 'row',
-          backgroundColor: '#FFFFFF',
-          borderRadius: 24,
-          padding: 4,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.1,
-          shadowRadius: 12,
-          elevation: 6,
-          borderWidth: 1,
-          borderColor: 'rgba(62, 107, 102, 0.1)',
-        }}>
-          <Pressable 
-            onPress={handleZoomOut}
-            style={{ padding: 10, opacity: scale <= 0.4 ? 0.3 : 1 }}
-            disabled={scale <= 0.4}
+      <PinchGestureHandler
+        simultaneousHandlers={scrollViewRef}
+        onGestureEvent={event => setScale(clampScale(baseScale.current * event.nativeEvent.scale))}
+        onHandlerStateChange={event => {
+          if (event.nativeEvent.oldState === State.ACTIVE) {
+            zoom(baseScale.current * event.nativeEvent.scale);
+          }
+        }}
+      >
+        <View style={{ width: '100%', height: layout.height * scale, backgroundColor: L.background }}>
+          <GHScrollView
+            ref={scrollViewRef}
+            horizontal
+            showsHorizontalScrollIndicator
+            nestedScrollEnabled
+            contentContainerStyle={{ width: layout.width * scale, height: layout.height * scale }}
           >
-            <Feather name="zoom-out" size={20} color={L.navy} />
+            <View style={{ width: layout.width, height: layout.height, transform: [{ scale }], transformOrigin: 'top left' }}>
+              <Svg width={layout.width} height={layout.height} style={StyleSheet.absoluteFill} pointerEvents="none">
+                <Defs>
+                  <Marker id="path-arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+                    <Path d="M 0 0 L 10 5 L 0 10 z" fill={L.teal} />
+                  </Marker>
+                </Defs>
+                {layout.connections.map((edge, index) => (
+                  <Path key={index} d={edge.d} stroke={L.teal} strokeWidth={2} strokeOpacity={0.6} fill="none" markerEnd="url(#path-arrow)" />
+                ))}
+              </Svg>
+              {layout.nodes.map(node => (
+                <Pressable
+                  key={node.id}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${node.title}. Open ${node.authorUsername || 'this user'}'s journey`}
+                  disabled={!node.authorUsername}
+                  onPress={() => router.push({ pathname: '/u/[username]', params: { username: node.authorUsername } })}
+                  style={({ pressed }) => [styles.node, { left: node.x, top: node.y, opacity: pressed ? 0.7 : 1 }]}
+                >
+                  <View style={styles.nodeHeading}>
+                    <Text style={styles.nodeLabel}>EXPERIENCE</Text>
+                    <Feather name="arrow-up-right" size={15} color={L.teal} />
+                  </View>
+                  <Text style={styles.nodeTitle} numberOfLines={3}>{node.title}</Text>
+                  <Text style={styles.nodeAuthor} numberOfLines={1}>@{node.authorUsername || 'explorer'}</Text>
+                </Pressable>
+              ))}
+            </View>
+          </GHScrollView>
+        </View>
+      </PinchGestureHandler>
+
+      <View style={styles.tools}>
+        <Text style={styles.hint}>Scroll to explore · Tap to open</Text>
+        <View style={styles.zoomTools}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Zoom out" disabled={scale <= MIN_SCALE}
+            onPress={() => zoom(scale - 0.15)} style={[styles.iconButton, scale <= MIN_SCALE && styles.disabled]}>
+            <Feather name="minus" size={16} color={L.navy} />
           </Pressable>
-          <View style={{ width: 1, backgroundColor: 'rgba(62, 107, 102, 0.1)', marginVertical: 8 }} />
-          <Pressable 
-            onPress={handleZoomIn}
-            style={{ padding: 10, opacity: scale >= 2.5 ? 0.3 : 1 }}
-            disabled={scale >= 2.5}
-          >
-            <Feather name="zoom-in" size={20} color={L.navy} />
+          <Pressable accessibilityRole="button" accessibilityLabel="Reset zoom" onPress={() => zoom(INITIAL_SCALE)} style={styles.zoomReset}>
+            <Text style={styles.zoomText}>{Math.round(scale * 100)}%</Text>
+          </Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel="Zoom in" disabled={scale >= MAX_SCALE}
+            onPress={() => zoom(scale + 0.15)} style={[styles.iconButton, scale >= MAX_SCALE && styles.disabled]}>
+            <Feather name="plus" size={16} color={L.navy} />
           </Pressable>
         </View>
       </View>
-    </PinchGestureHandler>
+    </>
   );
 }
+
+export function VisualGraph({ nodes, edges }: { nodes: GraphNode[]; edges: GraphEdge[] }) {
+  const paths = useMemo(() => groupCommunityPaths(nodes, edges), [nodes, edges]);
+  const [selectedPathId, setSelectedPathId] = useState<string | null>(null);
+  const currentIndex = Math.max(0, paths.findIndex(path => path.id === selectedPathId));
+  const path = paths[currentIndex];
+
+  if (!path) {
+    return <View style={styles.empty}><Text style={styles.hint}>No trending paths found.</Text></View>;
+  }
+
+  return (
+    <View style={styles.container}>
+      <PathCanvas key={path.id} path={path} />
+      <View style={styles.pagination}>
+        <Text style={styles.pathCount} accessibilityLiveRegion="polite">Path {currentIndex + 1} of {paths.length}</Text>
+        <View style={styles.pageButtons}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Previous path" disabled={currentIndex === 0}
+            onPress={() => setSelectedPathId(paths[currentIndex - 1].id)}
+            style={[styles.pageButton, currentIndex === 0 && styles.disabled]}>
+            <Feather name="arrow-left" size={18} color={L.teal} />
+          </Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel="Next path" disabled={currentIndex === paths.length - 1}
+            onPress={() => setSelectedPathId(paths[currentIndex + 1].id)}
+            style={[styles.pageButton, styles.nextButton, currentIndex === paths.length - 1 && styles.disabled]}>
+            <Text style={styles.nextText}>Next path</Text>
+            <Feather name="arrow-right" size={16} color={L.surface} />
+          </Pressable>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { width: '100%', borderWidth: 1, borderColor: L.border, borderRadius: 20, overflow: 'hidden', backgroundColor: L.surface },
+  pathHeading: { padding: 18, paddingBottom: 16, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  avatar: { width: 36, height: 36, borderRadius: 12, backgroundColor: L.tealTint, alignItems: 'center', justifyContent: 'center' },
+  author: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: L.navy },
+  metadata: { marginTop: 3, fontFamily: 'Inter_400Regular', fontSize: 11, color: L.gray },
+  node: { position: 'absolute', width: PATH_CARD_WIDTH, height: PATH_CARD_HEIGHT, padding: 14, borderRadius: 14, backgroundColor: L.surface, borderWidth: 1, borderColor: '#CBDAD7', justifyContent: 'space-between' },
+  nodeHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  nodeLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 9, letterSpacing: 1.2, color: L.teal },
+  nodeTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 14, lineHeight: 19, color: L.navy },
+  nodeAuthor: { fontFamily: 'Inter_400Regular', fontSize: 10, color: L.gray },
+  tools: { paddingLeft: 16, paddingRight: 6, paddingVertical: 6, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 4 },
+  hint: { fontFamily: 'Inter_400Regular', fontSize: 10, color: L.gray },
+  zoomTools: { flexDirection: 'row', alignItems: 'center' },
+  iconButton: { width: 36, height: 44, alignItems: 'center', justifyContent: 'center' },
+  zoomReset: { minWidth: 42, height: 44, alignItems: 'center', justifyContent: 'center' },
+  zoomText: { fontFamily: 'Inter_500Medium', fontSize: 11, color: L.navy, fontVariant: ['tabular-nums'] },
+  pagination: { borderTopWidth: 1, borderTopColor: L.border, paddingHorizontal: 16, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  pathCount: { fontFamily: 'Inter_500Medium', fontSize: 12, color: L.gray, fontVariant: ['tabular-nums'] },
+  pageButtons: { flexDirection: 'row', gap: 8 },
+  pageButton: { minWidth: 44, height: 44, borderRadius: 12, backgroundColor: L.tealTint, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, paddingHorizontal: 12 },
+  nextButton: { backgroundColor: L.teal },
+  nextText: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: L.surface },
+  disabled: { opacity: 0.35 },
+  empty: { padding: 24, borderRadius: 20, backgroundColor: L.background, alignItems: 'center' },
+});

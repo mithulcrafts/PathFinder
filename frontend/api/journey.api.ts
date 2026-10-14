@@ -38,16 +38,6 @@ export interface JourneyTransition {
   decisionLabel: string;
 }
 
-export interface JourneyUser {
-  username: string;
-  clerkId: string | null;
-  preferredLanguage: string;
-  reputationScore: number;
-  flagCount: number;
-  isFlagged: boolean;
-  email: string | null;
-}
-
 export interface UserJourneyStatistics {
   goals: number;
   experiences: number;
@@ -173,35 +163,35 @@ export async function submitJourney(
   if (file) {
     const formData = new FormData();
 
-formData.append(
-  "journey",
-  JSON.stringify({
-    conversationId,
-    ...journeyPayload,
-  })
-);
+    formData.append(
+      "journey",
+      JSON.stringify({
+        conversationId,
+        ...journeyPayload,
+      })
+    );
 
-if (Platform.OS === "web") {
-  const response = await fetch(file.uri);
-  const blob = await response.blob();
+    if (Platform.OS === "web") {
+      const response = await fetch(file.uri);
+      const blob = await response.blob();
 
-  formData.append("proof", blob, file.name);
-} else {
-  const uploadFile = new File(file.uri);
+      formData.append("proof", blob, file.name);
+    } else {
+      const uploadFile = new File(file.uri);
 
-  formData.append("proof", uploadFile,file.name);
-}
+      formData.append("proof", uploadFile, file.name);
+    }
 
-const response = await fetch(
-  `${process.env.EXPO_PUBLIC_API_BASE_URL}/journey/submit`,
-  {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    body: formData,
-  }
-);
+    const response = await fetch(
+      `${process.env.EXPO_PUBLIC_API_BASE_URL}/journey/submit`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      }
+    );
 
     if (!response.ok) {
       throw new Error(await response.text());

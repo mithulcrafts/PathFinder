@@ -66,27 +66,3 @@ export async function searchCommunity(params: {
 export async function getCommunityJourney(username: string): Promise<CommunityJourney> {
   return apiFetch<CommunityJourney>(`/community/journey/${encodeURIComponent(username)}`, { method: "GET" });
 }
-
-export interface FeedExperience {
-  id: string;
-  title: string;
-  context: string;
-  outcome: string | null;
-  isVerified: boolean;
-  startDate: string;
-  authorUsername: string;
-  authorSummary: string;
-}
-
-export async function getGlobalFeed(token?: string, page = 1, limit = 20): Promise<FeedExperience[]> {
-  const query = new URLSearchParams();
-  query.append("page", page.toString());
-  query.append("limit", limit.toString());
-  
-  const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
-  
-  return apiFetch<FeedExperience[]>(`/community/feed?${query.toString()}`, { 
-    method: "GET",
-    headers 
-  });
-}

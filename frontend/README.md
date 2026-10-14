@@ -1,112 +1,70 @@
-# PathFinder — Frontend
+# PathFinder frontend
 
-Expo React Native app for PathFinder. Built with [Expo SDK 56](https://docs.expo.dev/versions/v56.0.0/), [Expo Router](https://docs.expo.dev/router/introduction/) and [Clerk](https://clerk.com/) for authentication.
-
-## Prerequisites
-
-- [Node.js](https://nodejs.org/) >= 18
-- [Expo Go](https://expo.dev/go) app on your phone (for physical device testing)
-
+Expo React Native app for Android, iOS and web, using Expo Router and Clerk.
 
 ## Setup
 
-1. **Navigate to the frontend directory**
-   ```bash
-   cd frontend
-   ```
+Use the current Node.js 22 LTS release (or a newer supported release) and npm 10+.
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Set up environment variables**
-   ```bash
-   cp .env.example .env
-   ```
-   Then open `.env` and fill in:
-   - `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` — your Clerk publishable key from [Clerk Dashboard](https://dashboard.clerk.com)
-   - `EXPO_PUBLIC_API_BASE_URL` — the backend API URL (see below)
-
-4. **Start the dev server**
-   ```bash
-   npx expo start
-   ```
-
-## API URL Configuration
-
-The `EXPO_PUBLIC_API_BASE_URL` depends on how you're running the app:
-
-| Environment | URL |
-|-------------|-----|
-| Web browser | `http://localhost:5000/api` |
-| Android Emulator | `http://10.0.2.2:5000/api` |
-| iOS Simulator | `http://127.0.0.1:5000/api` |
-| Physical device (Expo Go) | `http://<YOUR_WIFI_IP>:5000/api` |
-
-> To find your Wi-Fi IP: run `ipconfig` (Windows) or `ifconfig` (Mac/Linux) and look for your local address (e.g. `192.168.1.5`).
-
-## Project Structure
-
-```text
-frontend/
-├── app/                          # Expo Router (file-based routing)
-│   ├── (tabs)/                   # Bottom tab navigation
-│   │   ├── _layout.tsx           # Tab navigator configuration
-│   │   ├── index.tsx             # Home dashboard
-│   │   ├── explore.tsx           # AI query & discovery
-│   │   ├── community.tsx         # Community journeys
-│   │   ├── journey.tsx           # User journey overview
-│   │   └── profile.tsx           # User profile
-│   ├── full-journey/             # Interactive graph/timeline views
-│   ├── _layout.tsx               # Root layout with providers
-│   ├── +html.tsx                 # Web HTML configuration
-│   ├── index.tsx                 # Landing page
-│   ├── journey-details.tsx       # Detailed journey visualization
-│   ├── oauth-native-callback.tsx # Clerk OAuth callback
-│   ├── results.tsx               # AI retrieval results
-│   └── share-journey.tsx         # Chat-based onboarding & submission
-│
-├── api/                          # API client & request wrappers
-├── assets/                       # Images, icons, fonts, splash assets
-├── components/
-│   ├── community/                # Community UI components
-│   ├── landing/                  # Landing page sections
-│   └── ui/                       # Shared reusable UI components
-│
-├── constants/
-│   └── colors.ts                 # Theme & color palette
-│
-├── services/                     # Backend API services
-├── types/
-│   └── schema.ts                 # Shared TypeScript interfaces
-├── utils/                        # Helper utilitie
+```sh
+cd frontend
+npm ci
+cp .env.example .env
+npm start
 ```
 
-## Key Dependencies
+Set `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` to your Clerk publishable key and `EXPO_PUBLIC_API_BASE_URL` to the API root **including `/api`**. Never place backend secret keys in Expo public variables.
 
-| Package | Purpose |
-|---------|---------|
-| `expo-router` | File-based routing and navigation |
-| `@clerk/clerk-expo` | Authentication and user management |
-| `expo-secure-store` | Secure storage for authentication tokens |
-| `expo-auth-session` | OAuth authentication flow |
-| `expo-av` | Voice recording and audio playback |
-| `expo-file-system` | Local file management and uploads |
-| `expo-document-picker` | PDF proof selection |
-| `expo-image-picker` | Image proof selection |
-| `expo-sharing` | Sharing journey visualizations |
-| `nativewind` | Tailwind CSS styling for React Native |
-| `react-native-reanimated` | High-performance animations |
-| `react-native-gesture-handler` | Gesture-based interactions |
-| `react-native-svg` | Graph and visualization rendering |
-| `react-native-webview` | Embedded web content (Neo4j graph visualization) |
+Shared profiles use `EXPO_PUBLIC_WEB_APP_URL`, defaulting to `https://path-finder-webapp.vercel.app`. This must point to the Expo web client, not the landing website. Rebuild the frontend after changing Expo public variables. The frontend Vercel rewrite supports direct `/u/:username` links; the landing project's redirect also recovers older links after that project is redeployed.
 
-## API Endpoints Used
+| Target | Example API root |
+| --- | --- |
+| Web | `http://localhost:5000/api` |
+| Android emulator | `http://10.0.2.2:5000/api` |
+| iOS simulator | `http://127.0.0.1:5000/api` |
+| Physical device | `http://<YOUR_WIFI_IP>:5000/api` |
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/query` | POST | Send text query (JSON) or voice audio (FormData) |
-| `/api/output/translate` | POST | Translate AI insights to user's preferred language |
-| `/api/output/speech` | POST | Generate text-to-speech audio for AI summary |
-| `/api/journey/extract` | POST | Extract structured user journey from natural language |
+Use `npm run web`, `npm run android` or `npm run ios` for the corresponding target. Native builds are needed when testing integrations unavailable in Expo Go.
+
+## Structure
+
+```text
+app/                     Expo routes and layouts only
+  (tabs)/                ask, community, journey, profile
+  u/[username].tsx       Public or query-filtered journey profile
+  index.tsx              App landing and authentication
+  results.tsx            Query results, translation and speech
+  share-journey.tsx       Draft review and submission
+  journey-details.tsx    Individual timeline detail
+  oauth-native-callback.tsx
+api/                     HTTP transport, endpoint wrappers and response types
+components/
+  community/             Native SVG community graph
+  journey/               Reusable expandable goal/experience cards
+  landing/               Expo landing sections and animation primitives
+  ui/                    Shared controls
+constants/               Theme palettes
+utils/                   Dates, graph layouts and public journey URLs
+types/                   Query/timeline interfaces
+tests/                   Isolated graph behavior tests
+```
+
+The separately deployed Vite site is in `../LandingPage/`. It is not a replacement for the Expo landing/auth route.
+
+## Checks
+
+```sh
+npm run typecheck
+npm test
+npm run build
+```
+
+Typechecking rejects unused declarations. The tests use the existing TypeScript compiler and Node's test runner; they exercise generated graph scripts, community layouts, share URLs and the legacy redirect without loading React Native, Clerk or external services. The build exports the web app. Testing real login, recording, uploads, sharing and native graph interactions still requires the appropriate environment/device.
+
+## Transport and platform conventions
+
+Use `apiFetch` for JSON requests. Audio responses and proof uploads have their own binary/multipart handling; keep platform-specific content types, filenames and error behavior when modifying them. Authentication tokens come from Clerk.
+
+Both journey graph screens use `utils/journeyGraph.ts`, preserving personal/public sizing differences and existing message protocols. Reuse the shared UI in `components/`; helper files under `app/` are interpreted as routes by Expo.
+
+See [architecture](../docs/architecture.md), [local setup](../docs/setup.md), and [maintenance rules](../docs/maintenance/README.md).

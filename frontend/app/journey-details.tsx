@@ -1,4 +1,3 @@
-import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { TimelineEvent } from '@/types/schema';

@@ -1,7 +1,7 @@
 import type {RetrievedContext} from "./retrieveContext.processor.js";
 
 import {generateJourneyPatterns} from "../../services/commonPatterns.service.js";
-import {mineJourneyPatterns,type MinedJourneyPattern,} from "../../services/mineJourneyPatterns.service.js";
+import {mineJourneyPatterns,} from "../../services/mineJourneyPatterns.service.js";
 
 export interface CommonPattern {
   title: string;

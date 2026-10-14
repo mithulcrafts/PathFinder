@@ -1,7 +1,5 @@
-import type { JourneyTransition } from "../processors/journey/journeySchema.js";
-import type { JourneyGoal } from "../types/journey/Journey.types.js";
 import { getSession, closeSession } from "./neo4j.service.js";
-import type { UserJourney } from "./user.service.js";
+import { attachExperienceGoals, mapJourneyExperience, mapJourneyGoal, mapJourneyTransition } from "./journeyMapping.js";
 
 const TOPIC_SCORE = 10;
 const SUBTOPIC_SCORE = 20;
@@ -222,10 +220,6 @@ export async function searchCommunityUsers(
   }
 }
 
-function neo4jDateToString(date: any): string | null {
-  return date ? date.toString() : null;
-}
-
 export async function getCommunityJourney(
   username: string,
   userId?: string
@@ -255,22 +249,7 @@ export async function getCommunityJourney(
       { username }
     );
 
-    const goals = goalsResult.records.map((record) => {
-      const goal = record.get("g");
-
-      return {
-        id: goal.properties.id,
-        title: goal.properties.title,
-        description: goal.properties.description,
-        status: goal.properties.status,
-        topics: goal.properties.topics,
-        subtopics: goal.properties.subtopics,
-        startDate: goal.properties.startDate.toString(),
-        endDate: goal.properties.endDate
-          ? goal.properties.endDate.toString()
-          : null,
-      };
-    }) satisfies JourneyGoal[];
+    const goals = goalsResult.records.map(mapJourneyGoal);
 
     const experiencesResult = await session.run(
       `
@@ -295,36 +274,11 @@ export async function getCommunityJourney(
       { username, userId: userId ?? "anonymous" }
     );
 
-    const experiences = experiencesResult.records.map((record) => {
-      const experience = record.get("e").properties;
-      const skillNodes = record.get("skills") as any[];
-
-      return {
-        id: experience.id,
-        title: experience.title,
-        startDate: experience.startDate.toString(),
-        endDate: experience.endDate
-          ? experience.endDate.toString()
-          : null,
-        context: experience.context,
-        challengeFaced: experience.challengeFaced ?? null,
-        outcome: experience.outcome ?? null,
-        organization: experience.organization ?? null,
-        applicationStatus: experience.applicationStatus ?? null,
-        achievements: experience.achievements ?? null,
-        isVerified: experience.isVerified ?? false,
-        timelineSummary: experience.timelineSummary,
-        upvoteCount: Number(record.get("fastUpvoteCount")),
-        hasUpvoted: record.get("hasUpvoted"),
-        goalIds: [] as string[],
-        skills: skillNodes
-          .filter(Boolean)
-          .map((skill) => ({
-            name: skill.properties.name,
-            type: skill.properties.type,
-          })),
-      };
-    });
+    const experiences = experiencesResult.records.map((record) => ({
+      ...mapJourneyExperience(record),
+      upvoteCount: Number(record.get("fastUpvoteCount")),
+      hasUpvoted: record.get("hasUpvoted"),
+    }));
 
     const goalRelationshipResult = await session.run(
       `
@@ -334,19 +288,7 @@ export async function getCommunityJourney(
       { username }
     );
 
-    const goalMap = new Map<string, string[]>();
-
-    for (const record of goalRelationshipResult.records) {
-      goalMap.set(
-        record.get("experienceId"),
-        record.get("goalIds")
-      );
-    }
-
-    experiences.forEach((experience) => {
-      experience.goalIds =
-        goalMap.get(experience.id) ?? [];
-    });
+    attachExperienceGoals(experiences, goalRelationshipResult.records);
 
     const transitionsResult = await session.run(
       `
@@ -360,16 +302,7 @@ export async function getCommunityJourney(
       { username }
     );
 
-    const transitions = transitionsResult.records.map(
-      (record) => ({
-        fromExperienceId:
-          record.get("fromExperienceId"),
-        toExperienceId:
-          record.get("toExperienceId"),
-        decisionLabel:
-          record.get("decisionLabel"),
-      })
-    ) satisfies JourneyTransition[];
+    const transitions = transitionsResult.records.map(mapJourneyTransition);
 
     return {
       user: {

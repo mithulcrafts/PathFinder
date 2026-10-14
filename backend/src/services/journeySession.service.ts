@@ -1,6 +1,5 @@
 import { randomUUID } from "crypto";
-import redis from "./redis.service.js";
-import { getShareJourneyPrompt } from "../prompts/onboarding/shareJourney.prompt.js";
+import { upstash as redis } from "../config/upstash.config.js";
 import type { JourneySession } from "../types/journey/JourneySession.types.js";
 import { JourneyState } from "../types/journey/JourneySession.types.js";
 

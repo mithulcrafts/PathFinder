@@ -1,7 +1,6 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, ViewStyle } from 'react-native';
+import { Text, TouchableOpacity, ActivityIndicator, ViewStyle } from 'react-native';
 import Animated, {
-  useAnimatedStyle, useSharedValue, withSpring, withTiming,
+  useAnimatedStyle, useSharedValue, withSpring,
 } from 'react-native-reanimated';
 import { Feather } from '@expo/vector-icons';
 import { UI } from '../../constants/colors';

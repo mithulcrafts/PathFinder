@@ -9,7 +9,7 @@ Follow this guide to configure dependencies, set up environment variables, and r
 * **Node.js**: `v22.0.0` or higher
 * **npm**: `v10.0.0` or higher
 * **Neo4j DB**: A running local Neo4j instance or a Neo4j Aura (Serverless) database.
-* **Upstash Redis**: An Upstash Redis account for rate limiting, workflow execution, and query caching.
+* **Upstash Redis**: An Upstash Redis account for onboarding session storage.
 * **Clerk**: An active Clerk account for authentication.
 * **Cloudinary**: A Cloudinary account for media and PDF proof uploads.
 
@@ -20,7 +20,7 @@ Follow this guide to configure dependencies, set up environment variables, and r
 ### Navigate and Install
 ```bash
 cd backend
-npm install
+npm ci
 ```
 
 ### Configure Environment Variables
@@ -66,10 +66,10 @@ CORS_ORIGINS=http://localhost:8081,http://localhost:19006
    ```bash
    npm run migrate
    ```
-   2. **Upload Initial Journey Data**
-   Import a journey dataset from the `db/journeys/` directory:
-    ```bash
-   npm run upload-seeds <journey-file>
+2. **Upload Initial Journey Data**
+   Import a journey dataset from the `db/journeys/` directory. The retained legacy seeds use named months (for example `Jan 2000`); current validation requires `01 2000`. Convert dates in a reviewed copy before importing. See the [history audit](maintenance/commit-history-audit.md) for this existing compatibility issue:
+   ```bash
+   npm run upload-seeds -- <journey-file>
    ```
    Run the command again with a different filename to import additional journey datasets.
 3. **Start Dev Server**:
@@ -85,7 +85,7 @@ CORS_ORIGINS=http://localhost:8081,http://localhost:19006
 ### Navigate and Install
 ```bash
 cd ../frontend
-npm install
+npm ci
 ```
 
 ### Configure Environment Variables
@@ -97,7 +97,7 @@ cp .env.example .env
 Ensure the variables are configured:
 ```env
 # URL pointing to your local backend Express API
-EXPO_PUBLIC_API_BASE_URL=http://localhost:5000
+EXPO_PUBLIC_API_BASE_URL=http://localhost:5000/api
 
 # Clerk Publishable Key (Must match the backend)
 EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
@@ -118,9 +118,9 @@ The Metro Bundler will run at `http://localhost:8081`. Press `w` in your termina
 
 ## 3. Common Errors & Troubleshooting
 
-### 1. `Cannot find module 'expo-sharing' or 'expo-haptics'`
-* **Cause**: The latest merge introduced native file sharing and haptic feedbacks in the frontend.
-* **Resolution**: Run `npm install` inside the `frontend` folder to update your package lock.
+### 1. Missing installed modules
+* **Cause**: Installed dependencies do not match the checked-in lockfile.
+* **Resolution**: Run `npm ci` inside the affected application folder to install the locked dependencies.
 
 ### 2. Neo4j Connection Refused or Authentication Errors
 * **Cause**: Incorrect database URI protocol (`neo4j://` vs `neo4j+s://`) or expired credentials.

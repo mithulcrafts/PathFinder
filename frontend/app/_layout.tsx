@@ -3,15 +3,14 @@ import "../global.css";
 import { ClerkProvider, ClerkLoaded } from "@clerk/clerk-expo";
 import { Slot } from "expo-router";
 import * as SecureStore from "expo-secure-store";
-import { View, Platform, StyleSheet, ActivityIndicator, Text, TouchableOpacity } from "react-native";
+import { View, Platform, ActivityIndicator, Text, TouchableOpacity } from "react-native";
 import { useFonts, Manrope_400Regular, Manrope_500Medium, Manrope_600SemiBold, Manrope_700Bold } from "@expo-google-fonts/manrope";
 import { InstrumentSerif_400Regular, InstrumentSerif_400Regular_Italic } from "@expo-google-fonts/instrument-serif";
 import { JetBrainsMono_400Regular, JetBrainsMono_700Bold } from "@expo-google-fonts/jetbrains-mono";
 import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from "@expo-google-fonts/inter";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect, useCallback } from "react";
+import { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import * as Updates from "expo-updates";
 
 // Prevent splash from auto-hiding until fonts are ready
 SplashScreen.preventAutoHideAsync().catch(console.warn);
@@ -21,11 +20,6 @@ const tokenCache = {
   async getToken(key: string) {
     try {
       const item = await SecureStore.getItemAsync(key);
-      if (item) {
-        console.log(`${key} was used 🔐 \n`);
-      } else {
-        console.log("No values stored under key: " + key);
-      }
       return item;
     } catch (error) {
       console.warn("SecureStore get item error: ", error);
@@ -46,8 +40,6 @@ const tokenCache = {
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
-console.log("Using Clerk key:", publishableKey);
-
 if (!publishableKey) {
   throw new Error("EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY is undefined");
 }
@@ -67,12 +59,6 @@ export default function RootLayout() {
     Inter_600SemiBold,
     Inter_700Bold,
   });
-
-
-  console.log("Update ID:", Updates.updateId);
-  console.log("Channel:", Updates.channel);
-  console.log("Runtime:", Updates.runtimeVersion);
-  console.log("PK:", process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY);
 
   useEffect(() => {
     if (fontsLoaded) {

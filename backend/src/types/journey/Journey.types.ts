@@ -21,14 +21,6 @@ export type GoalSubtopic =
   | "Other"
   | "Competition";
 
-export type SubmitGoal = {
-  narrative: string;
-  topics: GoalTopic[];
-  subtopics: GoalSubtopic[];
-  status: GoalStatus;
-  startDate: string;
-  endDate?: string | null;
-};
 export type SkillType = "Technical" | "Soft" | "Domain" | "ExtraCurricular";
 
 export type ProofSourceType = "image" | "pdf" | "github" | "link";

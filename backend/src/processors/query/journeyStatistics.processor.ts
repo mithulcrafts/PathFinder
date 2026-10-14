@@ -9,12 +9,11 @@ export function buildJourneyStatistics(
   context: RetrievedContext
 ): JourneyStatistics {
   const matchedUsers = new Set<string>();
+  const experienceIds = new Set(context.experiences.map((experience) => experience.id));
 
   for (const journey of context.journeys) {
     if (
-      journey.experienceIds.some((id) =>
-        context.experiences.some((e) => e.id === id)
-      )
+      journey.experienceIds.some((id) => experienceIds.has(id))
     ) {
       matchedUsers.add(journey.username);
     }

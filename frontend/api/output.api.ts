@@ -1,5 +1,4 @@
 import { apiFetch } from "./api";
-import { Paths, File } from "expo-file-system";
 
 export interface TranslateResponse {
   translatedAiInsights: {
@@ -44,7 +43,7 @@ export async function generateSpeechUri(
     throw new Error("Failed to generate speech");
   }
 
-  // We need to read the audio blob as base64 and return a data URI for expo-av
+  // We need to read the audio blob as base64 and return a data URI for expo-audio
   const blob = await response.blob();
   return new Promise((resolve, reject) => {
     const reader = new FileReader();

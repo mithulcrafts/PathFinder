@@ -22,7 +22,7 @@ app.use(
 );
 
 app.use(express.json());
-app.use((req, res, next) => {
+app.use((req, _res, next) => {
   console.log(`[${new Date().toISOString()}] Incoming request: ${req.method} ${req.url}`);
   next();
 });

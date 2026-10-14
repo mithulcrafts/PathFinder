@@ -12,7 +12,7 @@ By structuring raw human experience into a verifiable, queryable **Life Graph**,
 
 ---
 
-## ✦ Live Pitch & Deliverables
+## ✦ Try PathFinder & Explore Resources
 
 * **Official Landing Page**: [Visit Website](https://path-finder-murex-six.vercel.app/)
 * **Web Client Preview**: [Launch Web App](https://path-finder-webapp.vercel.app)
@@ -119,14 +119,14 @@ Journey
 
 ---
 
-## ✦ Technical Architecture & Sponsor Integration
+## ✦ Technical Architecture
 
-PathFinder’s core is built using a highly synergistic stack. Sponsor technologies are not secondary integrations; they are structural architectural pillars:
+PathFinder combines graph storage, AI processing, voice services, and a cross-platform client:
 
 ### 1. Graph Database & Retrieval: Neo4j
 * **Purpose**: Trajectory Topology & Causal Querying
-* **Integration**: Every journey is modeled as a connected knowledge graph where **Users, Goals, Experiences, Skills, Decisions, Proofs, and Outcomes** are represented as nodes connected through relationships such as `HAS_EXPERIENCE`, `BUILT_SKILL`, `TRANSITION`, `HAS_PROOF`, and `PURSUED_GOAL`. Neo4j powers multi-hop graph traversal, neighborhood expansion, relationship discovery, full-text search, vector search, and GraphRAG retrieval to identify similar career trajectories and decision patterns.
-* **Engineering Rationale**: Human journeys are linear over time but branch out causally through decisions. Modeling decisions, pivots, and transitions as database nodes and relationships allows us to traverse pathways with sub-millisecond execution times. Using traditional relational tables or document databases would require recursive, expensive self-joins to find transition patterns.
+* **Integration**: Every journey is modeled with **User, Goal, Experience, Skill and Proof** nodes connected through `HAS_GOAL`, `HAS_EXPERIENCE`, `BUILT_SKILL`, `CONTRIBUTED_TO`, `HAS_PROOF` and `TRANSITION`. Outcomes are experience fields; decisions label transition relationships. Neo4j combines graph traversal and vector search to retrieve relevant experiences and related journeys.
+* **Engineering Rationale**: Human journeys are linear over time but branch out causally through decisions. Representing decisions and pivots as labeled transition relationships allows the retrieval pipeline to follow those relationships directly. The retrieval pipeline combines vector similarity with graph relationships to find transition patterns.
 
 ### 2. Audio Processing: Sarvam AI
 * **Purpose**: Voice-to-Text Ingestion & Local Language Translation
@@ -134,10 +134,10 @@ PathFinder’s core is built using a highly synergistic stack. Sponsor technolog
 * **Engineering Rationale**: People express high-fidelity emotional details, failures, and complex career contexts far more naturally via voice than typing. Sarvam AI ensures that raw regional expressions are captured, translated, and standardized for upstream LLM processing without losing structural nuance.
 
 ### 3. Verification & Processing: Gemini & Upstash
-* **Purpose**: Structured Information Extraction, Duplicate Prevention, and Workflow Orchestration
+* **Purpose**: Structured Information Extraction, Duplicate Prevention, and Session Storage
 * **Integration**:
-  * **Gemini (gemini-3.1-flash-lite)** acts as our structured extractor. It parses raw transcripts into strict schemas for Neo4j import.
-  * **Upstash Redis** stores onboarding conversation sessions, maintains conversational context across multiple interactions, and caches expensive LLM responses to reduce latency and API usage.
+  * **Gemini** acts as our structured extractor. It parses narratives into strict schemas for Neo4j import.
+  * **Upstash Redis** stores onboarding conversation history and drafts with a 24-hour session expiry.
 * **Engineering Rationale**: Parsing irregular, conversational human speech into structured JSON is highly complex. Gemini’s native JSON Schema support allows us to extract dates in standard `MM YYYY` formats, categorize emotion labels, and isolate outcomes. Upstash Redis ensures high-performance session state mapping.
 
 ### 4. Cross-Platform UI: Expo (React Native)
@@ -158,14 +158,6 @@ Traditional background screening is a slow, centralized, and expensive process. 
 1. **AI Pathway Simulation**: Allow users to model future choices (e.g., *"If I pursue a Master's abroad vs. bootstrapping a SaaS, what does the graph suggest my likelihood of reaching 50 LPA is, based on historical user nodes?"*).
 2. **Decentralized Verification Protocol**: Move verification certificates and proof logs onto decentralized chains to issue cryptographically signed, immutable career milestone achievements.
 3. **Automated Mentorship Matching**: Connect users whose current *Goal* matches the exact *Achievement* node of a senior verified user in the same career vector.
-
----
-
-## ✦ Bonus Tasks & Requirements
-
-- [✅] **All team members followed official social channels and submitted the form** (mandatory)
-- [✅] **Bonus Task 1** – Shared our hackathon badges and filed the form (2 points)
-- [✅] **Bonus Task 2** – Write a blog (3 points)
 
 ---
 
@@ -215,8 +207,11 @@ Read the following deep-dive manuals to understand, build, and deploy PathFinder
 | **Expo** | Mobile & Web Frontend | Native Swift/Kotlin | Expo Router and React Native Web provide a unified codebase, reducing UI divergence. |
 | **Gemini 3.1** | JSON Trajectory Extraction | Llama-3-70B on Groq | Gemini 3.1 Flash-Lite offers superior structured output validation and larger context windows for long, complex verbal histories. |
 | **Clerk** | JWT Authentication | Custom Express Sessions | Clerk handles token synchronization across React Native Native, Web, and Express middlewares. |
-| **Upstash Redis** | Vector Index Caching & Rates | Local Redis Instance | Serverless Upstash instances reduce operational complexity and automatically scale on demand during hackathon peaks. |
+| **Upstash Redis** | Onboarding Session Storage | Local Redis Instance | Managed Redis stores conversation history and journey drafts with automatic expiry. |
 | **Cloudinary** | Proof Asset Storage | Local File Storage | Cloudinary generates optimized thumbnails and secure CDN delivery URLs for images and PDFs submitted as verification evidence. |
 
 ---
-*Built with passion for HackHazards 2026.*
+
+## Maintenance
+
+See the [current architecture](docs/architecture.md), [commit history audit](docs/maintenance/commit-history-audit.md), and [maintenance and validation guide](docs/maintenance/README.md).

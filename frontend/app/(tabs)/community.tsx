@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, ScrollView,
-  ActivityIndicator, RefreshControl, Modal, Pressable, Platform, Image
+  RefreshControl, Modal, Pressable, Platform, Image
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -16,8 +16,7 @@ import {
 } from '../../api/community.api';
 import { useAuth } from '@clerk/clerk-expo';
 import { VisualGraph } from '../../components/community/VisualGraph';
-import { SectionLabel, PillBadge } from '../../components/ui/SectionLabel';
-import { DotDivider } from '../../components/ui/DotDivider';
+import { SectionLabel } from '../../components/ui/SectionLabel';
 
 // ═══════════════════════════════════════════════════════
 //  Bottom-sheet picker
@@ -432,10 +431,6 @@ export default function CommunityPage() {
   const handleSubtopicSelect = (subtopic: string) => {
     setSelectedSubtopic(selectedSubtopic === subtopic ? null : subtopic);
     setSubtopicPickerVisible(false);
-  };
-
-  const handleSearch = () => {
-    fetchData();
   };
 
   const renderUserCard = useCallback(({ item, index }: { item: SearchCommunityUser; index: number }) => (

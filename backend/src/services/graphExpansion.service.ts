@@ -1,21 +1,9 @@
 import { closeSession, getSession } from "./neo4j.service.js";
-import type { GoalStatus, GoalTopic, GoalSubtopic, ApplicationStatus, JourneySkill, SkillType } from "../types/journey/Journey.types.js";
+import type { ApplicationStatus, JourneyGoal, JourneySkill } from "../types/journey/Journey.types.js";
 
-export interface RetrievedGoal {
-  id: string;
-  title: string;
-  description: string;
-  status: GoalStatus;
-  topics: GoalTopic[];
-  subtopics: GoalSubtopic[];
-  startDate: string;
-  endDate?: string | null;
-}
+export type RetrievedGoal = JourneyGoal;
 
-export interface RetrievedSkill {
-  name: string;
-  type: SkillType;
-}
+export type RetrievedSkill = JourneySkill;
 
 export interface RetrievedTransition {
   toExperienceId: string;

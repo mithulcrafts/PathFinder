@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  Alert, ActivityIndicator, KeyboardAvoidingView, TextInput, Platform,
-  Image
+  Alert, ActivityIndicator, TextInput, Platform
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAudioPlayer } from "expo-audio";
@@ -346,12 +345,6 @@ export default function ResultsPage() {
             )}
           </View>
           <TouchableOpacity style={{ height: 56, borderRadius: 28, borderWidth: 2, borderColor: UI.teal, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }} onPress={() => {
-            console.log("🚀 FRONTEND RESULTS - Navigating with payload:", {
-              username: user.username,
-              hasExpandedDetailsField: !!user.expandedDetails,
-              goalsLength: user.expandedDetails?.goals?.length,
-              experiencesLength: user.expandedDetails?.experiences?.length,
-            });
             router.push({
               pathname: `/u/${user.username}`, params: {
                 fromQuery: 'true', imageUrl: user.imageUrl ?? '', expandedDetails: JSON.stringify(user.expandedDetails || { goals: [], experiences: [], transitions: [] })

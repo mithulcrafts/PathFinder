@@ -1,8 +1,8 @@
 import { randomUUID } from "crypto";
 import { createGoal } from "../../services/goal.service.js";
 import { extractGoal } from "./extractGoal.processor.js";
-import {submitGoalSchema,journeyGoalSchema} from "./journeySchema.js";
-import type { JourneyGoal, SubmitGoal } from "../../types/journey/Journey.types.js";
+import { submitGoalSchema, journeyGoalSchema, type SubmitGoal } from "./journeySchema.js";
+import type { JourneyGoal } from "../../types/journey/Journey.types.js";
 import { validateGoalDuplicate } from "./staticAnalysis/goalDuplicate.validator.js";
 import { addGoalReputation } from "../../services/reputation.service.js";
 
@@ -16,13 +16,14 @@ export async function submitGoal(
       `Invalid goal: ${validation.error.message}`
     );
   }
-  const validGoal = validation.data as any;
+  const validGoal = validation.data;
   
-  let goalToSave: JourneyGoal;
+  let goalInput: JourneyGoal;
+  let goalSource: "generated" | "manual";
   
   if ("narrative" in validGoal) {
     const extractedGoal = await extractGoal(validGoal.narrative);
-    const tempgoal = {
+    goalInput = {
       id: randomUUID(),
       title: extractedGoal.title,
       description: extractedGoal.description,
@@ -32,16 +33,7 @@ export async function submitGoal(
       startDate: validGoal.startDate,
       endDate: validGoal.endDate ?? null,
     };
-    const goalValidation = journeyGoalSchema.safeParse(tempgoal);
-    if (!goalValidation.success) {
-      throw new Error(
-        `Invalid generated goal: ${goalValidation.error.message}`
-      );
-    }
-    goalToSave = {
-      ...goalValidation.data,
-      endDate: goalValidation.data.endDate ?? null
-    };
+    goalSource = "generated";
   } else {
     const now = new Date();
     const currentMonthYear = `${String(now.getMonth() + 1).padStart(2, "0")} ${now.getFullYear()}`;
@@ -50,7 +42,7 @@ export async function submitGoal(
     if (validGoal.status === "achieved") mappedStatus = "achieved";
     else if (validGoal.status === "abandoned") mappedStatus = "abandoned";
 
-    const tempgoal = {
+    goalInput = {
       id: randomUUID(),
       title: validGoal.title,
       description: validGoal.description || "",
@@ -60,17 +52,19 @@ export async function submitGoal(
       startDate: validGoal.startDate || currentMonthYear,
       endDate: validGoal.endDate ?? null,
     };
-    const goalValidation = journeyGoalSchema.safeParse(tempgoal);
-    if (!goalValidation.success) {
-      throw new Error(
-        `Invalid manual goal: ${goalValidation.error.message}`
-      );
-    }
-    goalToSave = {
-      ...goalValidation.data,
-      endDate: goalValidation.data.endDate ?? null
-    };
+    goalSource = "manual";
   }
+
+  const goalValidation = journeyGoalSchema.safeParse(goalInput);
+  if (!goalValidation.success) {
+    throw new Error(
+      `Invalid ${goalSource} goal: ${goalValidation.error.message}`
+    );
+  }
+  const goalToSave: JourneyGoal = {
+    ...goalValidation.data,
+    endDate: goalValidation.data.endDate ?? null,
+  };
 
   const isDuplicate = await validateGoalDuplicate(
     userId,

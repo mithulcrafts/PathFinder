@@ -1,0 +1,9 @@
+{
+  "redirects": [
+    {
+      "source": "/u/:username",
+      "destination": "https://path-finder-webapp.vercel.app/u/:username",
+      "permanent": true
+    }
+  ]
+}

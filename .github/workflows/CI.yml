@@ -6,6 +6,7 @@ on:
       - frontend
       - backend
       - ai
+      - LandingPage
 
   pull_request:
     branches:
@@ -36,6 +37,9 @@ jobs:
       - name: Build Backend
         run: npm run build
 
+      - name: Test Backend Contracts
+        run: npm test
+
   frontend:
     name: Frontend Build Check
     runs-on: ubuntu-latest
@@ -54,7 +58,36 @@ jobs:
           node-version: 22
 
       - name: Install Frontend Dependencies
-        run: npm install
+        run: npm ci
 
       - name: Type Check Frontend
-        run: npx tsc --noEmit
+        run: npm run typecheck
+
+      - name: Test Journey Graphs
+        run: npm test
+
+  landing-page:
+    name: Landing Page Check
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: LandingPage
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Landing Page Dependencies
+        run: npm ci
+
+      - name: Lint Landing Page
+        run: npm run lint -- --deny-warnings
+
+      - name: Build Landing Page
+        run: npm run build

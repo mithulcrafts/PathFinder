@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   Alert, ActivityIndicator, Platform, ScrollView,
@@ -9,8 +9,8 @@ import { useAuth } from '@clerk/clerk-expo';
 import { submitQuery } from '../../api/query.api';
 import { L } from '../../constants/colors';
 import Animated, {
-  useSharedValue, useAnimatedStyle, withSpring, withRepeat, withSequence, withTiming,
-  FadeInDown, FadeInUp,
+  useSharedValue, useAnimatedStyle, withRepeat, withSequence, withTiming,
+  FadeInDown,
 } from 'react-native-reanimated';
 import { Feather } from '@expo/vector-icons';
 

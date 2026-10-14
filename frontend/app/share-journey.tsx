@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   View, Text, FlatList, TextInput,
   TouchableOpacity, KeyboardAvoidingView, Platform,
@@ -12,7 +12,6 @@ import { Feather } from '@expo/vector-icons';
 import Animated, { FadeIn, FadeInDown, FadeInUp, Layout } from 'react-native-reanimated';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system';
 
 interface ChatMessage {
   id: string;
@@ -36,21 +35,6 @@ export default function ShareJourneyPage() {
       }
     }
   };
-
-  const displayConfirm = (title: string, message: string, onConfirm: () => void) => {
-    if (Platform.OS === 'web') {
-      if (window.confirm(`${title}\n\n${message}`)) {
-        onConfirm();
-      }
-    } else {
-      Alert.alert(title, message, [
-        { text: "Cancel", style: "cancel" },
-        { text: "Confirm", style: "destructive", onPress: onConfirm }
-      ]);
-    }
-  };
-
-
 
   const [activeTab, setActiveTab] = useState<'chat' | 'form'>('chat');
   const [conversationId, setConversationId] = useState<string | null>(null);
@@ -208,11 +192,6 @@ export default function ShareJourneyPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    console.log("activeTab:", activeTab);
-    console.log("messages:", messages);
-  }, [activeTab, messages]);
-
   const sendMessage = async () => {
     if (!inputText.trim() || !conversationId) return;
     const userText = inputText;
@@ -288,11 +267,8 @@ export default function ShareJourneyPage() {
         return cleanedExp;
       });
       payload.experiences = cleanedExperiences;
-      console.log(
-        JSON.stringify(payload.experiences, null, 2)
-      );
 
-      const res = await submitJourney(token, conversationId, payload, fileToUpload  );
+      const res = await submitJourney(token, conversationId, payload, fileToUpload);
       if (res.success) {
         displayAlert(
           "Journey Saved! 🚀",

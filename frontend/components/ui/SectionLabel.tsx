@@ -1,4 +1,3 @@
-import React from 'react';
 import { Text, View, ViewStyle } from 'react-native';
 import { UI } from '../../constants/colors';
 

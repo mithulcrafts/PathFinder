@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Animated, {
   Easing,
@@ -11,11 +11,9 @@ import Animated, {
   withRepeat,
   withSequence,
   withDelay,
-  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 import type { SharedValue } from 'react-native-reanimated';
-import { UI } from '../../constants/colors';
 
 export const sectionEasing = Easing.out(Easing.cubic);
 export const sectionRevealDuration = 400;
@@ -143,35 +141,6 @@ export function StaggerItem({ index, style, children }: StaggerItemProps) {
   }));
 
   return <Animated.View style={[style, animatedStyle]}>{children}</Animated.View>;
-}
-
-const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
-
-type MotionButtonProps = React.ComponentProps<typeof TouchableOpacity>;
-
-export function MotionButton({ style, children, onPressIn, onPressOut, ...props }: MotionButtonProps) {
-  const scale = useSharedValue(1);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  return (
-    <AnimatedTouchableOpacity
-      {...props}
-      onPressIn={(event) => {
-        scale.value = withSpring(0.97, { damping: 18, stiffness: 280 });
-        onPressIn?.(event);
-      }}
-      onPressOut={(event) => {
-        scale.value = withSpring(1, { damping: 18, stiffness: 280 });
-        onPressOut?.(event);
-      }}
-      style={[style, animatedStyle]}
-    >
-      {children}
-    </AnimatedTouchableOpacity>
-  );
 }
 
 type ProblemDividerDotProps = {

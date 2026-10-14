@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { getUserGoals } from "../../services/userGoals.service.js";
+import { getUserGoals } from "../../services/goal.service.js";
 import type { GeminiJourneyDraft } from "../../types/journey/GeminiJourneyDraft.types.js";
 import type { PartialJourneyDraft } from "../../types/journey/PartialJourney.types.js";
 
