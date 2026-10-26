@@ -17,7 +17,7 @@ npm test
 npm run build
 ```
 
-`npm test` runs isolated journey mapping and statistics tests. It does not connect to databases, load AI models, or require service credentials. Typechecking rejects unused local declarations and parameters as well as type errors.
+`npm test` runs isolated journey mapping, statistics and maintenance tests. Maintenance tests use mocked databases and a temporary local HTTP server. The suite does not connect to live databases, load AI models, or require service credentials. Typechecking rejects unused local declarations and parameters as well as type errors.
 
 ## Integration diagnostics and operations
 
@@ -36,6 +36,8 @@ These scripts use the services configured in `.env`; they are not the unit suite
 | `npm run generate-embeddings` | Generate and persist experience embeddings |
 | `npm run neo4j:keepalive` | Run the scheduled database health query |
 
-Legacy seed files use named-month dates; current validation requires numeric `MM YYYY`. Convert a reviewed copy before importing. See the [history audit](../docs/maintenance/commit-history-audit.md).
+Legacy seed files use named-month dates; current validation requires numeric `MM YYYY`. Convert and validate a reviewed copy before importing. See [seed setup](../docs/setup.md#seed-and-run).
 
 Migration, seed, embedding, and backfill scripts are operational entrypoints even when no application file imports them. Review their target database before use.
+
+See [keeping services active](../docs/setup.md#5-keeping-services-active) for the protected database endpoints and external scheduler setup.

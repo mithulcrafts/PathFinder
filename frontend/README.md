@@ -67,4 +67,4 @@ Use `apiFetch` for JSON requests. Audio responses and proof uploads have their o
 
 Both journey graph screens use `utils/journeyGraph.ts`, preserving personal/public sizing differences and existing message protocols. Reuse the shared UI in `components/`; helper files under `app/` are interpreted as routes by Expo.
 
-See [architecture](../docs/architecture.md), [local setup](../docs/setup.md), and [maintenance rules](../docs/maintenance/README.md).
+See [architecture and development conventions](../docs/architecture.md) and [local setup and checks](../docs/setup.md).

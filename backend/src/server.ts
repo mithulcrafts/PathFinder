@@ -1,8 +1,7 @@
+import "./config/env.js";
 import express from "express";
-import dotenv from "dotenv";
 import cors from "cors";
 import { clerkMiddleware } from "@clerk/express";
-dotenv.config();
 
 import queryRoutes from "./routes/query.routes.js";
 import outputRoutes from "./routes/output.routes.js";
@@ -10,6 +9,7 @@ import authRoutes from "./routes/auth.routes.js";
 import journeyRoutes from "./routes/journey.routes.js";
 import userRoutes from "./routes/user.routes.js";
 import communityRoutes from "./routes/community.routes.js";
+import maintenanceRoutes from "./routes/maintenance.routes.js";
 
 const app = express();
 
@@ -26,6 +26,11 @@ app.use((req, _res, next) => {
   console.log(`[${new Date().toISOString()}] Incoming request: ${req.method} ${req.url}`);
   next();
 });
+// The scheduler uses its own secret and does not need a Clerk session.
+app.get("/health", (_req, res) => {
+  res.set("Cache-Control", "no-store").json({ status: "ok" });
+});
+app.use("/api/maintenance", maintenanceRoutes);
 app.use(clerkMiddleware());
 
 app.use("/api/query", queryRoutes);

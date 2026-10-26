@@ -212,6 +212,6 @@ Read the following deep-dive manuals to understand, build, and deploy PathFinder
 
 ---
 
-## Maintenance
+## Developer documentation
 
-See the [current architecture](docs/architecture.md), [commit history audit](docs/maintenance/commit-history-audit.md), and [maintenance and validation guide](docs/maintenance/README.md).
+See [architecture and development conventions](docs/architecture.md), [setup and validation](docs/setup.md), and [keeping services active](docs/setup.md#5-keeping-services-active).

@@ -67,7 +67,7 @@ CORS_ORIGINS=http://localhost:8081,http://localhost:19006
    npm run migrate
    ```
 2. **Upload Initial Journey Data**
-   Import a journey dataset from the `db/journeys/` directory. The retained legacy seeds use named months (for example `Jan 2000`); current validation requires `01 2000`. Convert dates in a reviewed copy before importing. See the [history audit](maintenance/commit-history-audit.md) for this existing compatibility issue:
+   Import a journey dataset from the `db/journeys/` directory. The retained legacy seeds use named months (for example `Jan 2000`); current validation requires `01 2000`. Convert and validate dates in a reviewed copy before importing:
    ```bash
    npm run upload-seeds -- <journey-file>
    ```
@@ -133,3 +133,43 @@ The Metro Bundler will run at `http://localhost:8081`. Press `w` in your termina
 ### 4. Web View alert() warnings in Web Browser
 * **Cause**: Using standard React Native `Alert.alert` on web builds causes silent warnings and locks interface loops.
 * **Resolution**: The frontend uses platform checks (`Platform.OS === 'web'`) to switch from `Alert.alert` to browser native `alert()`. Ensure you do not revert these checks during customization edits.
+
+## 4. Development checks
+
+Run from the repository root:
+
+```sh
+npm --prefix backend run build
+npm --prefix backend test
+npm --prefix frontend run typecheck
+npm --prefix frontend test
+npm --prefix frontend run build
+npm --prefix LandingPage run lint -- --deny-warnings
+npm --prefix LandingPage run build
+```
+
+Automated tests use isolated records, mocked database calls and a local HTTP server. Live login, AI requests, database connections, proof uploads and native audio/sharing need separate integration checks. See [development conventions](architecture.md#development-conventions) and [known limitations](architecture.md#known-limitations-and-follow-up-work).
+
+## 5. Keeping services active
+
+Deploy the backend, then configure external jobs at [cron-job.org](https://cron-job.org/en/). No cron library is required. Set the job timezone to **Asia/Kolkata** and use the backend's HTTPS base URL with these paths:
+
+| Method and path | Schedule (IST) | Operation |
+| --- | --- | --- |
+| `GET /health` | Daily at 09:00 and 09:02 | Wake/check the backend; no database access. |
+| `POST /api/maintenance/neo4j` | Daily at 09:05 | Read-only `RETURN true AS ok`. |
+| `POST /api/maintenance/redis` | 09:06 on days 1, 4, 7, …, 31 each month | One `GET maintenance:keepalive`; a missing key is valid. |
+
+Cron expressions: `0,2 9 * * *`, `5 9 * * *`, and `6 9 */3 * *`. Redis checks are at most three days apart, with shorter gaps at month boundaries. Leave month and weekday selections unrestricted.
+
+Generate a secret locally:
+
+```sh
+node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
+```
+
+Store it as `MAINTENANCE_SECRET` in Render's backend environment (`backend/.env` for local testing). Set the same value in the `X-Maintenance-Secret` request header for both database jobs; leave their bodies empty. The public health job needs no secret. Never put the secret in Git, frontend settings or URLs.
+
+Enable failure/recovery alerts. Test each job manually: expect HTTP 200; missing/wrong request secrets return 401, and missing server configuration or database failures return 503. Check a scheduled run after the backend has slept. The second wake request allows for a cold-start timeout; investigate failed database checks. Render can sleep again afterward.
+
+Keep the existing Neo4j GitHub workflow until scheduled checks are verified. These endpoints do not restore paused/archived databases or guarantee provider availability; review provider inactivity notices and resume/restore through the provider console when needed.
