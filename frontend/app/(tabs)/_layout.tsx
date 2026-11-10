@@ -1,6 +1,7 @@
-import { Tabs } from 'expo-router';
+import { Link, Tabs } from 'expo-router';
 import { L } from '../../constants/colors';
-import { View, Platform } from 'react-native';
+import { Image, Pressable, Text, View, Platform } from 'react-native';
+import { useDesktopLayout } from '../../utils/useDesktopLayout';
 import { Feather } from '@expo/vector-icons';
 
 const TAB_ITEMS = [
@@ -11,9 +12,36 @@ const TAB_ITEMS = [
 ] as const;
 
 export default function TabLayout() {
+  const desktop = useDesktopLayout();
   return (
     <Tabs
+      tabBar={desktop ? ({ state }) => (
+        <View style={{ backgroundColor: '#0A0F1D', alignItems: 'center' }}>
+          <View style={{ height: 76, width: '100%', maxWidth: 1440, paddingHorizontal: '5%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Link href="/ask" asChild>
+              <Pressable accessibilityLabel="PathFinder home" style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+                <Image source={require('../../assets/logo-dark.png')} resizeMode="contain" style={{ width: 28, height: 40 }} />
+                <Image source={require('../../assets/title-dark.png')} resizeMode="contain" style={{ width: 148, height: 20 }} />
+              </Pressable>
+            </Link>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              {TAB_ITEMS.map(item => {
+                const selected = state.routes[state.index].name === item.name;
+                const color = selected ? '#E9F5EE' : '#C4C9D1';
+                return <Link key={item.name} href={`/${item.name}`} asChild>
+                  <Pressable accessibilityState={{ selected }} style={{ flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 9, backgroundColor: selected ? '#24343A' : 'transparent' }}>
+                    <Feather name={item.icon} size={16} color={color} />
+                    <Text style={{ color, fontSize: 14, fontFamily: 'Manrope_600SemiBold' }}>{item.title}</Text>
+                  </Pressable>
+                </Link>;
+              })}
+            </View>
+          </View>
+        </View>
+      ) : undefined}
       screenOptions={{
+        tabBarPosition: desktop ? 'top' : 'bottom',
+        sceneStyle: desktop ? { width: '100%', maxWidth: 1152, alignSelf: 'center' } : undefined,
         headerShown: false,
         tabBarActiveTintColor: L.teal,
         tabBarInactiveTintColor: L.navySoft,
@@ -43,6 +71,7 @@ export default function TabLayout() {
           name={name}
           options={{
             title,
+            ...(desktop && name !== 'ask' ? { sceneStyle: { width: '100%', alignSelf: 'center' } as const } : {}),
             tabBarIcon: ({ color, focused }) => (
               <View style={{ alignItems: 'center' }}>
                 {focused && (

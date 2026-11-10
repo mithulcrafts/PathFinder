@@ -17,6 +17,9 @@ import {
 import { useAuth } from '@clerk/clerk-expo';
 import { VisualGraph } from '../../components/community/VisualGraph';
 import { SectionLabel } from '../../components/ui/SectionLabel';
+import { useDesktopLayout } from '../../utils/useDesktopLayout';
+import { DesktopCommunity } from '../../components/desktop/DesktopCommunity';
+import { L } from '../../constants/colors';
 
 // ═══════════════════════════════════════════════════════
 //  Bottom-sheet picker
@@ -322,6 +325,7 @@ function SkeletonCard() {
 // ═══════════════════════════════════════════════════════
 
 export default function CommunityPage() {
+  const desktop = useDesktopLayout();
   const router = useRouter();
   const { getToken } = useAuth();
   const [graph, setGraph] = useState<CommunityGraph | null>(null);
@@ -445,7 +449,23 @@ export default function CommunityPage() {
   const isSearchEnabled = selectedTopic != null;
 
   return (
-    <View style={{ flex: 1, backgroundColor: UI.background }}>
+    <View style={{ flex: 1, backgroundColor: desktop ? L.background : UI.background }}>
+      {desktop ? (
+        <DesktopCommunity
+          users={users}
+          graph={graph}
+          selectedTopic={selectedTopic}
+          selectedSubtopic={selectedSubtopic}
+          graphExpanded={graphExpanded}
+          isLoading={isLoading}
+          isRefreshing={isRefreshing}
+          onTopicPress={() => setTopicPickerVisible(true)}
+          onSubtopicPress={() => setSubtopicPickerVisible(true)}
+          onToggleGraph={() => setGraphExpanded(prev => !prev)}
+          onViewJourney={username => router.push(`/u/${username}`)}
+          onRefresh={onRefresh}
+        />
+      ) : <>
       {/* Header */}
       <View style={{ paddingHorizontal: 24, paddingTop: 56, paddingBottom: 8 }}>
         <Text style={{
@@ -563,6 +583,8 @@ export default function CommunityPage() {
           />
         )
       )}
+
+      </>}
 
       {/* Bottom sheet pickers */}
       <BottomSheetPicker

@@ -53,13 +53,14 @@
     "utf-8-validate": "^6.0.6"
   },
   "scripts": {
-    "start": "expo start",
+    "start": "node scripts/start-expo.cjs",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "web": "expo start --web",
+    "web": "node scripts/start-expo.cjs --web",
     "build": "expo export -p web",
     "eas-build-pre-install": "npm install --package-lock-only",
     "typecheck": "tsc --noEmit",
+    "perf:web": "node scripts/measure-web-load.cjs",
     "test": "node --test tests/*.test.mjs"
   },
   "engines": {
