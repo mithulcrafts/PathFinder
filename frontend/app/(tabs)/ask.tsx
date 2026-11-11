@@ -8,6 +8,7 @@ import { AudioModule, RecordingPresets, setAudioModeAsync, useAudioRecorder, use
 import { useAuth } from '@clerk/clerk-expo';
 import { submitQuery } from '../../api/query.api';
 import { L } from '../../constants/colors';
+import { useDesktopLayout } from '../../utils/useDesktopLayout';
 import Animated, {
   useSharedValue, useAnimatedStyle, withRepeat, withSequence, withTiming,
   FadeInDown,
@@ -15,15 +16,34 @@ import Animated, {
 import { Feather } from '@expo/vector-icons';
 
 const SUGGESTED_QUESTIONS = [
-  "Instead of building standard clone apps or simple layout designs, what unique open-source developer utilities and tracking dashboards have early-career engineers built to prove their low-level coding skills off-campus?",
-  "When scaling data delivery tiers, what specific automated build configurations, non-blocking queue setups, and multi-platform compilation rules were implemented to ensure fast execution speeds?",
-  "How have self-taught developers transformed their professional applications from generic, blind messaging into data-driven technical consultation notes that win direct technical interviews?",
-  "What core algorithmic strategies, bit manipulations, and custom array allocation frameworks do developers rely on when they need to process dense, multi-layered data rows without creating system memory drops?",
-  "How did self-funded or bootstrapped founders scale their SaaS or edtech platforms past the 50 LPA milestone without spending heavy capital on traditional ad agencies?",
-  "Once a software engineer moves past basic application frameworks and masters low-level infrastructure scaling, what complex systems-level goals do they typically target next?"
+  {
+    label: "Which open-source tools helped early-career engineers prove their coding skills off campus?",
+    prompt: "Instead of building standard clone apps or simple layout designs, what unique open-source developer utilities and tracking dashboards have early-career engineers built to prove their low-level coding skills off-campus?",
+  },
+  {
+    label: "Which build and queue setups helped teams speed up data delivery?",
+    prompt: "When scaling data delivery tiers, what specific automated build configurations, non-blocking queue setups, and multi-platform compilation rules were implemented to ensure fast execution speeds?",
+  },
+  {
+    label: "How did self-taught developers turn technical outreach into interviews?",
+    prompt: "How have self-taught developers transformed their professional applications from generic, blind messaging into data-driven technical consultation notes that win direct technical interviews?",
+  },
+  {
+    label: "How did engineers process dense data without running out of memory?",
+    prompt: "What core algorithmic strategies, bit manipulations, and custom array allocation frameworks do developers rely on when they need to process dense, multi-layered data rows without creating system memory drops?",
+  },
+  {
+    label: "How did bootstrapped SaaS and edtech founders grow past ₹50 lakh a year without heavy ad spend?",
+    prompt: "How did self-funded or bootstrapped founders scale their SaaS or edtech platforms past the 50 LPA milestone without spending heavy capital on traditional ad agencies?",
+  },
+  {
+    label: "What do engineers work on after learning to scale infrastructure?",
+    prompt: "Once a software engineer moves past basic application frameworks and masters low-level infrastructure scaling, what complex systems-level goals do they typically target next?",
+  },
 ];
 
 export default function QueryPage() {
+  const desktop = useDesktopLayout();
   const router = useRouter();
   const { getToken } = useAuth();
   const [query, setQuery] = useState('');
@@ -177,8 +197,8 @@ export default function QueryPage() {
         >
           <Text style={{
             fontFamily: 'Manrope_700Bold',
-            fontSize: 26,
-            lineHeight: 32,
+            fontSize: desktop ? 52 : 26,
+            lineHeight: desktop ? 60 : 32,
             letterSpacing: -0.5,
             color: L.navy,
             marginBottom: 12,
@@ -262,7 +282,8 @@ export default function QueryPage() {
                   disabled={isSearching}
                   activeOpacity={0.7}
                   style={{
-                    width: 40, height: 40, borderRadius: 20,
+                    width: desktop ? 'auto' : 40, height: 40, borderRadius: 20,
+                    flexDirection: 'row', gap: desktop ? 8 : 0, paddingHorizontal: desktop ? 16 : 0,
                     alignItems: 'center', justifyContent: 'center',
                     backgroundColor: isRecording ? L.terracotta : L.tealTint,
                   }}
@@ -272,6 +293,7 @@ export default function QueryPage() {
                     size={16}
                     color={isRecording ? '#FFF' : L.teal}
                   />
+                  {desktop && <Text style={{ color: isRecording ? '#FFF' : L.teal, fontFamily: 'Manrope_600SemiBold' }}>{isRecording ? 'Stop recording' : 'Use voice'}</Text>}
                 </TouchableOpacity>
               </View>
 
@@ -297,11 +319,13 @@ export default function QueryPage() {
                 disabled={isSearching || (!query.trim() && !isRecording)}
                 activeOpacity={0.7}
                 style={{
-                  width: 40, height: 40, borderRadius: 20,
+                  width: desktop ? 'auto' : 40, height: 40, borderRadius: 20,
+                  flexDirection: 'row', gap: desktop ? 8 : 0, paddingHorizontal: desktop ? 16 : 0,
                   alignItems: 'center', justifyContent: 'center',
                   backgroundColor: (!query.trim() && !isRecording) ? L.tealTint : L.teal,
                 }}
               >
+                {desktop && !isSearching && <Text style={{ color: (!query.trim() && !isRecording) ? L.teal : '#FFF', fontFamily: 'Manrope_600SemiBold' }}>Ask</Text>}
                 {isSearching ? (
                   <ActivityIndicator size="small" color="#FFF" />
                 ) : (
@@ -325,11 +349,11 @@ export default function QueryPage() {
             SUGGESTED QUESTIONS
           </Text>
 
-          <View style={{ gap: 10 }}>
-            {SUGGESTED_QUESTIONS.map((q, i) => (
-              <Animated.View key={i} entering={FadeInDown.delay(400 + i * 80).duration(400).springify()}>
+          <View style={{ gap: 10, ...(desktop && { flexDirection: 'row', flexWrap: 'wrap' }) }}>
+            {SUGGESTED_QUESTIONS.map(({ prompt, label }, i) => (
+              <Animated.View key={i} style={desktop ? { flexBasis: '32%', flexGrow: 1 } : undefined} entering={FadeInDown.delay(400 + i * 80).duration(400).springify()}>
                 <TouchableOpacity
-                  onPress={() => handleSuggestionPress(q)}
+                  onPress={() => handleSuggestionPress(prompt)}
                   disabled={isSearching}
                   activeOpacity={0.7}
                   style={{
@@ -342,6 +366,7 @@ export default function QueryPage() {
                     paddingHorizontal: 16,
                     borderWidth: 1,
                     borderColor: L.border,
+                    ...(desktop && { flex: 1, minHeight: 104 }),
                   }}
                 >
                   <View style={{
@@ -358,7 +383,7 @@ export default function QueryPage() {
                     lineHeight: 20,
                     color: L.navy,
                   }}>
-                    {q}
+                    {desktop ? label : prompt}
                   </Text>
                   <Feather name="arrow-up-right" size={14} color={L.navySoft} />
                 </TouchableOpacity>

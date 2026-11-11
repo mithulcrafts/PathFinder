@@ -15,6 +15,8 @@ import { Feather } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+import { useDesktopLayout } from '../../utils/useDesktopLayout';
+import { DesktopJourney } from '../../components/desktop/DesktopJourney';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -22,6 +24,7 @@ const { width: screenWidth } = Dimensions.get('window');
 // Main Page
 // ───────────────────────────────────────────────
 export default function JourneyPage() {
+  const desktop = useDesktopLayout();
   const { getToken } = useAuth();
   const { user: clerkUser } = useUser();
 
@@ -190,6 +193,13 @@ export default function JourneyPage() {
 
   return (
     <View style={{ flex: 1, backgroundColor: L.background }}>
+      {desktop ? (
+        <DesktopJourney
+          journey={journey}
+          imageUrl={clerkUser?.hasImage ? clerkUser.imageUrl : undefined}
+          onViewGraph={() => setShowGraph(true)}
+        />
+      ) : <>
       {/* Header */}
       <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: 56, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: L.border, backgroundColor: L.background }}>
         <View style={{ flex: 1 }}>
@@ -291,6 +301,7 @@ export default function JourneyPage() {
           </View>
         )}
       </ScrollView >
+      </>}
 
       {/* Graph Modal */}
       < Modal visible={showGraph} animationType="slide" presentationStyle="formSheet" >

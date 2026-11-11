@@ -1,4 +1,5 @@
 import { apiFetch } from "./api";
+import { createRequestCache } from "../utils/requestCache";
 
 export interface SyncedUser {
   clerkId: string;
@@ -10,12 +11,15 @@ export interface SyncedUser {
   isFlagged: boolean;
 }
 
+const syncedUsers = createRequestCache<SyncedUser>(15_000);
+export const clearSyncedUser = () => syncedUsers.clear();
+
 export async function syncUser(
   token: string
 ): Promise<SyncedUser> {
 
-  return apiFetch<SyncedUser>(
-    "/auth/sync",{method: "POST"},token);
+  return syncedUsers.get(token, () => apiFetch<SyncedUser>(
+    "/auth/sync", { method: "POST" }, token));
 }
 
 export async function updateProfile(
@@ -26,12 +30,17 @@ export async function updateProfile(
   }
 ): Promise<SyncedUser> {
 
-  return apiFetch<SyncedUser>(
-    "/user/profile",
-    {
-      method: "PATCH",
-      body: JSON.stringify(body),
-    },
-    token
-  );
+  clearSyncedUser();
+  try {
+    return await apiFetch<SyncedUser>(
+      "/user/profile",
+      {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      },
+      token
+    );
+  } finally {
+    clearSyncedUser();
+  }
 }

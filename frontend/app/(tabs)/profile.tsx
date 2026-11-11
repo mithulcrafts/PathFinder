@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, SafeAreaView, TextInput, Image, Keyboard } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth, useUser } from '@clerk/clerk-expo';
-import { syncUser, updateProfile, SyncedUser } from '../../api/auth.api';
+import { clearSyncedUser, syncUser, updateProfile, SyncedUser } from '../../api/auth.api';
 import { L } from '../../constants/colors';
 import { Feather } from '@expo/vector-icons';
 import BottomSheet, { BottomSheetTextInput, BottomSheetScrollView } from '@gorhom/bottom-sheet';
@@ -10,6 +10,9 @@ import Animated, { useSharedValue, useAnimatedStyle, withSpring, withSequence, F
 import { SectionLabel, PillBadge } from '../../components/ui/SectionLabel';
 import { DotDivider } from '../../components/ui/DotDivider';
 import { GradientButton } from '../../components/ui/GradientButton';
+import { useDesktopLayout } from '../../utils/useDesktopLayout';
+import { DesktopProfile } from '../../components/desktop/DesktopProfile';
+import { signOutWithoutReload } from '../../utils/signOut';
 
 const LANGUAGES = [
   { label: 'English', code: 'en' },
@@ -27,6 +30,7 @@ const LANGUAGES = [
 ];
 
 export default function ProfilePage() {
+  const desktop = useDesktopLayout();
   const router = useRouter();
   const { signOut, getToken } = useAuth();
   const { user: clerkUser } = useUser();
@@ -35,6 +39,7 @@ export default function ProfilePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const usernameInputRef = useRef<TextInput>(null);
+  const signOutPending = useRef(false);
 
   const [username, setUsername] = useState('');
   const [languageCode, setLanguageCode] = useState('en');
@@ -49,6 +54,9 @@ export default function ProfilePage() {
 
   useEffect(() => {
     loadUserProfile();
+    // Warm the public route without mounting it or running its login effects.
+    // Expo returns a thenable without .catch(); also contain synchronous load failures.
+    void Promise.resolve().then(() => import('../index')).catch(console.warn);
   }, []);
 
   const loadUserProfile = async () => {
@@ -103,8 +111,18 @@ export default function ProfilePage() {
   };
 
   const handleSignOut = async () => {
-    await signOut();
-    router.replace("/");
+    if (signOutPending.current) return;
+    signOutPending.current = true;
+    try {
+      await signOutWithoutReload(signOut, () => {
+        clearSyncedUser();
+        router.replace("/");
+      });
+    } catch (err) {
+      console.warn('Unable to sign out', err);
+    } finally {
+      signOutPending.current = false;
+    }
   };
 
   const usernameAnimStyle = useAnimatedStyle(() => ({ transform: [{ scale: usernameScale.value }] }));
@@ -141,6 +159,25 @@ export default function ProfilePage() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: L.background }}>
+      {desktop ? (
+        <DesktopProfile
+          displayName={displayName}
+          reputationScore={reputationScore}
+          imageUrl={clerkUser?.hasImage ? clerkUser.imageUrl : undefined}
+          username={username}
+          usernameInputRef={usernameInputRef}
+          onChangeUsername={setUsername}
+          onSaveUsername={handleSaveUsername}
+          onUsernameButtonPress={() => { Keyboard.dismiss(); handleSaveUsername(); }}
+          languageLabel={LANGUAGES.find(l => l.code === languageCode)?.label || languageCode}
+          onLanguagePress={() => bottomSheetRef.current?.expand()}
+          onAddExperience={() => router.push('/share-journey')}
+          onSignOut={handleSignOut}
+          showSuccessTick={showSuccessTick}
+          usernameAnimStyle={usernameAnimStyle}
+          languageAnimStyle={languageAnimStyle}
+        />
+      ) : <>
       {/* Header */}
       <Animated.View entering={FadeInDown.duration(400).springify()} style={{ paddingHorizontal: 24, paddingTop: 48, paddingBottom: 8 }}>
         <SectionLabel>Your Details</SectionLabel>
@@ -276,6 +313,7 @@ export default function ProfilePage() {
           </TouchableOpacity>
         </Animated.View>
       </ScrollView>
+      </>}
 
       {/* Bottom Sheet Picker (Language) */}
       <BottomSheet

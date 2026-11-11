@@ -11,6 +11,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { ProblemDividerDot, RippleMicBadge, SectionReveal, StaggerItem } from './landingMotion';
 import { UI, L } from '../../constants/colors';
+import { TEAM_CONTACTS } from '../../constants/teamContacts';
 
 const LegacyUI = {
   ...UI,
@@ -140,14 +141,14 @@ export function ProblemSection() {
 //  3. COMPARISON (Fragmented → Unified)
 //  Horizontal scroll of fragment cards → "+" → unified card
 
-const PLATFORMS = [
+export const PLATFORMS = [
   { icon: 'share-variant-outline' as const, name: 'LinkedIn', tag: 'Achievements' },
   { icon: 'message-text-outline' as const, name: 'Reddit', tag: 'Opinions' },
   { icon: 'play-circle-outline' as const, name: 'YouTube', tag: 'Stories' },
   { icon: 'creation-outline' as const, name: 'AI', tag: 'General Advice' },
 ];
 
-const JOURNEY_TAGS = ['Goals', 'Experiences', 'Skills', 'Decision Transitions', 'Outcomes'];
+export const JOURNEY_TAGS = ['Goals', 'Experiences', 'Skills', 'Decision Transitions', 'Outcomes'];
 
 function SwingingPlusBadge() {
   const translateY = useSharedValue(0);
@@ -253,7 +254,7 @@ export function ComparisonSection() {
 //  4. JOURNEY SEQUENCE (Timeline)
 //  White card feel, vertical timeline, teal/terracotta/sand dots
 
-const TIMELINE = [
+export const TIMELINE = [
   { label: 'College', caption: '"Chose projects over grades."', color: LegacyUI.accentSoft, dot: LegacyUI.accent },
   { label: 'Internship', caption: '"Rejected campus placement."', color: LegacyUI.surface, dot: LegacyUI.fg40 },
   { label: 'First Job', caption: '"Interviewed customers before writing code."', color: LegacyUI.surface, dot: LegacyUI.fg40 },
@@ -304,7 +305,7 @@ export function JourneySequenceSection() {
 //  5. SAMPLE QUESTIONS
 //  Single-column question cards with chevron affordance
 
-const QUESTIONS = [
+export const QUESTIONS = [
   "How did students prepare for Google internships?",
   "What did founders build before finding product-market fit?",
   "How did engineers transition into AI?",
@@ -572,7 +573,7 @@ export function CommunitySection() {
 //  9. ACCESSIBILITY / VOICE & LANGUAGE
 //  Mic ripple badge, language chips, feature cards
 
-const LANG_CHIPS = ['हिन्दी', 'தமிழ்', 'తెలుగు', 'বাংলা', 'मराठी'];
+export const LANG_CHIPS = ['हिन्दी', 'தமிழ்', 'తెలుగు', 'বাংলা', 'मराठी'];
 
 export function AccessibilitySection() {
   return (
@@ -696,27 +697,38 @@ export function FooterSection() {
       {/* Nav links */}
       <StaggerItem index={3}>
         <View style={{ flexDirection: 'row', gap: 20, marginBottom: 24, flexWrap: 'wrap', justifyContent: 'center' }}>
-          {['PRIVACY', 'TERMS', 'GITHUB', 'CONTACT'].map((link, i) => {
-            if (link === 'GITHUB') {
-              return (
-                <TouchableOpacity key={i} onPress={() => Linking.openURL('https://github.com/mithulcrafts/PathFinder')}>
-                  <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.50)', letterSpacing: 1, fontFamily: 'Manrope_600SemiBold', textDecorationLine: 'underline' }}>
-                    {link}
-                  </Text>
-                </TouchableOpacity>
-              );
-            }
-            return (
-              <Text key={i} style={{ fontSize: 11, color: 'rgba(255,255,255,0.50)', letterSpacing: 1, fontFamily: 'Manrope_600SemiBold' }}>
-                {link}
-              </Text>
-            );
-          })}
+          <TouchableOpacity accessibilityRole="link" onPress={() => Linking.openURL('https://github.com/mithulcrafts/PathFinder')}>
+            <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.50)', letterSpacing: 1, fontFamily: 'Manrope_600SemiBold', textDecorationLine: 'underline' }}>
+              GITHUB
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </StaggerItem>
+
+      <StaggerItem index={4}>
+        <View style={{ alignItems: 'center', gap: 24, marginTop: 8, marginBottom: 16 }}>
+          <Text accessibilityRole="header" style={{ color: L.surface, fontSize: 18, fontFamily: 'Manrope_700Bold' }}>Contact the team</Text>
+          {TEAM_CONTACTS.map(member => (
+            <View key={member.email} style={{ alignItems: 'center', gap: 10 }}>
+              <TouchableOpacity accessibilityRole="link" accessibilityLabel={`${member.name} on LinkedIn`} onPress={() => Linking.openURL(member.linkedin)} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={{ color: L.surface, fontSize: 14, fontFamily: 'Manrope_700Bold' }}>{member.name}</Text>
+                <Feather name="arrow-up-right" size={12} color="#C4C9D1" />
+              </TouchableOpacity>
+              <TouchableOpacity accessibilityRole="link" accessibilityLabel={`${member.name} on GitHub`} onPress={() => Linking.openURL(member.github)} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <MaterialCommunityIcons name="github" size={16} color="#C4C9D1" />
+                <Text style={{ color: '#C4C9D1', fontSize: 12, fontFamily: 'Manrope_400Regular', textDecorationLine: 'underline' }}>GitHub</Text>
+              </TouchableOpacity>
+              <TouchableOpacity accessibilityRole="link" onPress={() => Linking.openURL(`mailto:${member.email}`)} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Feather name="mail" size={14} color="#C4C9D1" />
+                <Text style={{ color: '#C4C9D1', fontSize: 12, fontFamily: 'Manrope_400Regular', textDecorationLine: 'underline' }}>{member.email}</Text>
+              </TouchableOpacity>
+            </View>
+          ))}
         </View>
       </StaggerItem>
 
       {/* Tech line */}
-      <StaggerItem index={4}>
+      <StaggerItem index={5}>
         <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', textAlign: 'center', marginTop: 16, fontFamily: 'Manrope_400Regular' }}>
           Powered by Expo, Neo4j, GraphRAG, Gemini, Groq and Sarvam AI.
         </Text>
