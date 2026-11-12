@@ -73,7 +73,7 @@ test('Clerk starts while fonts are still loading', () => {
   assert.ok(includes(tree, 'ClerkProvider'));
   assert.ok(includes(tree, 'Spinner'));
 });
-test('public homepage does not wait for Clerk or unrelated app fonts', () => {
+test('home route mounts its session gate without waiting for unrelated app fonts', () => {
   const tree = renderRoot({ home: true, landingReady: true, appReady: false });
   assert.ok(includes(tree, 'Slot'));
   assert.ok(!includes(tree, 'ClerkLoaded'));
@@ -105,11 +105,11 @@ test('failed logout does not navigate or pretend the session ended', async () =>
   assert.equal(navigated, false);
 });
 
-function landingSession({ signedIn = true, syncUser, startOAuthFlow = async () => ({}) }) {
-  const hooks = [], navigations = [], alerts = [];
+function landingSession({ signedIn = true, loaded = true, getToken = async () => 'test-token', syncUser, startOAuthFlow = async () => ({}), refreshOAuth = false }) {
+  const hooks = [], navigations = [], alerts = [], renders = [];
   let cursor = 0, pendingEffects = [], scheduled = false, landing;
   const router = { replace: path => navigations.push(path) };
-  const auth = { isLoaded: true, isSignedIn: signedIn, getToken: async () => 'test-token' };
+  const auth = { isLoaded: loaded, isSignedIn: signedIn, getToken };
   const schedule = () => {
     if (scheduled) return;
     scheduled = true;
@@ -146,8 +146,17 @@ function landingSession({ signedIn = true, syncUser, startOAuthFlow = async () =
   const page = compile('../app/index.tsx', name => {
     if (name === 'react') return react;
     if (name === 'react/jsx-runtime') return { jsx, jsxs: jsx };
-    if (name === 'react-native') return { Platform: { OS: 'ios' }, Alert: { alert: (_title, message) => alerts.push(message) } };
-    if (name === '@clerk/clerk-expo') return { useAuth: () => auth, useOAuth: () => ({ startOAuthFlow }) };
+    if (name === 'react-native') return {
+      Platform: { OS: 'ios' }, Alert: { alert: (_title, message) => alerts.push(message) },
+      View: 'View', Text: 'Text', TouchableOpacity: 'Button', ActivityIndicator: 'Spinner',
+    };
+    if (name.includes('constants/colors')) return { UI: {} };
+    if (name.includes('startupTiming')) return { recordWebStartup() {} };
+    if (name.includes('DesktopLanding')) return { __esModule: true, default: 'DesktopLanding' };
+    if (name === '@clerk/clerk-expo') return {
+      useAuth: () => auth,
+      useOAuth: () => ({ startOAuthFlow: refreshOAuth ? () => startOAuthFlow() : startOAuthFlow }),
+    };
     if (name === 'expo-router') return { useRouter: () => router };
     if (name.includes('auth.api')) return { syncUser, clearSyncedUser() {} };
     if (name.includes('useDesktopLayout')) return { useDesktopLayout: () => true };
@@ -160,10 +169,23 @@ function landingSession({ signedIn = true, syncUser, startOAuthFlow = async () =
     pendingEffects = [];
     const content = page.default().props.children;
     landing = content.type();
+    renders.push(landing);
     for (const effect of pendingEffects) effect();
   }
   render();
-  return { press: () => landing.props.onPressGoogle(), navigations, alerts };
+  function find(tree, type) {
+    if (!tree || typeof tree !== 'object') return;
+    if (tree.type === type) return tree;
+    return [tree.props?.children].flat().map(child => find(child, type)).find(Boolean);
+  }
+  return {
+    press: () => landing.props.onPressGoogle(),
+    retry: () => find(landing, 'Button').props.onPress(),
+    get tree() { return landing; },
+    get signIn() { return landing.props.onPressGoogle; },
+    setAuth: update => { Object.assign(auth, update); render(); },
+    navigations, alerts, renders,
+  };
 }
 
 const settleSession = () => new Promise(resolve => setImmediate(resolve));
@@ -179,11 +201,14 @@ test('signed-in visitor retries failed backend sync without reopening Google OAu
   });
   await settleSession();
   assert.deepEqual(page.navigations, []);
-  page.press();
+  assert.ok(!includes(page.tree, 'DesktopLanding'));
+  assert.ok(includes(page.tree, 'Button'));
+  page.retry();
   await settleSession();
   assert.equal(syncCalls, 2);
   assert.equal(oauthCalls, 0);
   assert.deepEqual(page.navigations, ['/(tabs)/ask']);
+  assert.ok(page.renders.every(tree => !includes(tree, 'DesktopLanding')));
 });
 
 test('signed-in visitor without a username still reaches profile setup', async () => {
@@ -203,23 +228,112 @@ test('signed-out visitor starts Google OAuth once, even with repeated clicks', a
       return new Promise(resolve => { finishOAuth = resolve; });
     },
   });
-  page.press();
+  const clickSignIn = page.signIn;
+  clickSignIn();
   await settleSession();
-  page.press();
+  clickSignIn();
   await settleSession();
   assert.equal(oauthCalls, 1);
   finishOAuth({ createdSessionId: 'test-session', setActive: async session => activeSessions.push(session) });
   await settleSession();
   assert.deepEqual(activeSessions, [{ session: 'test-session' }]);
+  assert.ok(includes(page.tree, 'Spinner'));
+  assert.ok(page.renders.slice(1).every(tree => !includes(tree, 'DesktopLanding')));
 });
 
 test('failed manual session retry gives feedback without claiming success', async () => {
   const page = landingSession({ syncUser: async () => { throw Error('offline'); } });
   await settleSession();
   assert.deepEqual(page.alerts, []);
-  page.press();
+  page.retry();
   await settleSession();
   assert.deepEqual(page.navigations, []);
-  assert.equal(page.alerts.length, 1);
-  assert.match(page.alerts[0], /could not connect to the server/);
+  assert.ok(includes(page.tree, 'Button'));
+  assert.match(JSON.stringify(page.tree), /could not connect to the server/);
+  assert.ok(page.renders.every(tree => !includes(tree, 'DesktopLanding')));
+});
+
+test('unknown session never renders the homepage; confirmed signed-out session does', async () => {
+  let syncCalls = 0;
+  const page = landingSession({ loaded: false, signedIn: undefined, syncUser: async () => { syncCalls++; } });
+  assert.ok(includes(page.tree, 'Spinner'));
+  assert.ok(!includes(page.tree, 'DesktopLanding'));
+  page.setAuth({ isLoaded: true, isSignedIn: false });
+  await settleSession();
+  assert.ok(includes(page.tree, 'DesktopLanding'));
+  assert.equal(syncCalls, 0);
+});
+
+test('restored session stays behind the loader until backend sync and navigation finish', async () => {
+  let finishSync;
+  const page = landingSession({ loaded: false, syncUser: () => new Promise(resolve => { finishSync = resolve; }) });
+  page.setAuth({ isLoaded: true, isSignedIn: true });
+  await settleSession();
+  assert.ok(includes(page.tree, 'Spinner'));
+  assert.deepEqual(page.navigations, []);
+  finishSync({ username: 'existing-user' });
+  await settleSession();
+  assert.deepEqual(page.navigations, ['/(tabs)/ask']);
+  assert.ok(page.renders.every(tree => !includes(tree, 'DesktopLanding')));
+});
+
+test('successful OAuth does not flash the homepage before Clerk publishes the session', async () => {
+  let syncCalls = 0, oauthCalls = 0;
+  const page = landingSession({
+    signedIn: false,
+    refreshOAuth: true,
+    startOAuthFlow: async () => { oauthCalls++; return { createdSessionId: 'session', setActive: async () => {} }; },
+    syncUser: async () => { syncCalls++; return { username: 'existing-user' }; },
+  });
+  page.press();
+  await settleSession();
+  assert.ok(includes(page.tree, 'Spinner'));
+  page.setAuth({ isSignedIn: false });
+  await settleSession();
+  assert.equal(oauthCalls, 1);
+  page.setAuth({ isSignedIn: true });
+  await settleSession();
+  assert.equal(syncCalls, 1);
+  assert.deepEqual(page.navigations, ['/(tabs)/ask']);
+  assert.ok(page.renders.slice(1).every(tree => !includes(tree, 'DesktopLanding')));
+});
+
+for (const failure of ['cancelled', 'failed', 'activation failed']) {
+  test(`${failure} OAuth returns signed-out visitors to the homepage`, async () => {
+    const page = landingSession({
+      signedIn: false,
+      syncUser: async () => { throw Error('must not sync'); },
+      startOAuthFlow: async () => {
+        if (failure === 'failed') throw Error('OAuth unavailable');
+        if (failure === 'activation failed') return {
+          createdSessionId: 'session', setActive: async () => { throw Error('activation unavailable'); },
+        };
+        return {};
+      },
+    });
+    page.press();
+    await settleSession();
+    assert.ok(includes(page.tree, 'DesktopLanding'));
+    assert.deepEqual(page.navigations, []);
+    assert.equal(page.alerts.length, failure === 'cancelled' ? 0 : 1);
+  });
+}
+
+test('missing session token offers retry instead of leaving a permanent spinner', async () => {
+  const page = landingSession({ getToken: async () => null, syncUser: async () => { throw Error('must not sync'); } });
+  await settleSession();
+  assert.ok(includes(page.tree, 'Button'));
+  assert.ok(!includes(page.tree, 'DesktopLanding'));
+  assert.deepEqual(page.navigations, []);
+});
+
+test('sign-out reveals the homepage and ignores stale backend sync completion', async () => {
+  let finishSync;
+  const page = landingSession({ syncUser: () => new Promise(resolve => { finishSync = resolve; }) });
+  await settleSession();
+  page.setAuth({ isSignedIn: false });
+  finishSync({ username: 'previous-user' });
+  await settleSession();
+  assert.ok(includes(page.tree, 'DesktopLanding'));
+  assert.deepEqual(page.navigations, []);
 });
