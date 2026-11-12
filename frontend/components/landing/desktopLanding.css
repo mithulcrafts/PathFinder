@@ -1,4 +1,8 @@
 .pf-landing .continuity {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  grid-template-rows: auto 1fr;
   background: #0a0f1d;
   color: #fff;
 }
@@ -53,6 +57,7 @@
   color: #ff9652;
 }
 .pf-landing .continuity .hero {
+  margin: 0 auto;
   display: grid;
   grid-template-columns: minmax(0, 1.07fr) minmax(0, 1fr);
   gap: clamp(35px, 6vw, 105px);
@@ -66,11 +71,11 @@
   margin: 0;
 }
 .pf-landing .continuity h1 {
-  font-size: clamp(56px, 5.05vw, 80px);
-  line-height: 1.02;
+  font-size: clamp(42px, 3.8vw, 64px);
+  line-height: 1.08;
   font-weight: 400;
   letter-spacing: -0.03em;
-  font-family: InstrumentSerif_400Regular, Georgia, serif;
+  font-family: ArchivoNarrow_700Bold, Arial, sans-serif;
 }
 .pf-landing .continuity h1 .line {
   display: block;
@@ -122,6 +127,7 @@
   min-width: 0;
 }
 .pf-landing .continuity .journey h2 {
+  font-family: ArchivoNarrow_400Regular, Arial, sans-serif;
   color: #142235;
   font-size: clamp(23px, 1.81vw, 30px);
   font-weight: 400;
@@ -182,6 +188,7 @@
   box-shadow: none;
 }
 .pf-landing .continuity .stage {
+  font-family: ArchivoNarrow_400Regular, Arial, sans-serif;
   font-size: 14px;
   line-height: 19px;
   font-weight: 400;
@@ -218,7 +225,7 @@
   background: var(--st-paper);
   color: var(--st-text);
   font:
-    400 16px/1.65 Manrope_400Regular,
+    400 16px/1.65 ArchivoNarrow_400Regular,
     Arial,
     sans-serif;
   letter-spacing: normal;
@@ -261,7 +268,7 @@
 .pf-story h2,
 .pf-story h3,
 .pf-story h4 {
-  font-family: Manrope_400Regular, Arial, sans-serif;
+  font-family: ArchivoNarrow_400Regular, Arial, sans-serif;
   color: inherit;
   text-transform: none;
 }
@@ -293,7 +300,7 @@
 }
 .pf-story .st-label {
   font:
-    400 11px/1.4 Manrope_700Bold,
+    400 11px/1.4 ArchivoNarrow_700Bold,
     Arial,
     sans-serif;
   letter-spacing: 0.14em;
@@ -303,9 +310,9 @@
 }
 .pf-story h2.st-heading {
   font:
-    400 clamp(32px, 3.35vw, 52px)/1.13 InstrumentSerif_400Regular,
-    Georgia,
-    serif;
+    400 clamp(30px, 3vw, 46px)/1.15 ArchivoNarrow_700Bold,
+    Arial,
+    sans-serif;
   letter-spacing: -0.03em;
   max-width: 24ch;
   text-wrap: balance;
@@ -443,9 +450,9 @@
 .pf-story .st-question-list li:before {
   content: '“';
   font:
-    27px/0.9 InstrumentSerif_400Regular,
-    Georgia,
-    serif;
+    27px/0.9 ArchivoNarrow_400Regular,
+    Arial,
+    sans-serif;
   color: #9a4409;
   transform: translateY(4px);
 }
@@ -587,7 +594,7 @@
 }
 .pf-story .st-langs li {
   font:
-    400 14px/1.4 Manrope_400Regular,
+    400 14px/1.4 ArchivoNarrow_400Regular,
     'Nirmala UI',
     Arial,
     sans-serif;
@@ -629,6 +636,19 @@
   line-height: 1.55;
   margin-top: 3px;
 }
+.pf-story .st-closing {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--st-navy);
+  color: #fff;
+}
+.pf-story .st-closing .st-vision {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
 .pf-story .st-vision,
 .pf-story .st-footer {
   background: var(--st-navy);
@@ -638,16 +658,16 @@
   color: #ff9a56;
 }
 .pf-story .st-vision .st-inner {
-  padding-bottom: clamp(50px, 5.5vw, 80px);
+  padding: clamp(32px, 4vh, 56px) 0;
 }
 .pf-story .st-vision blockquote {
   font:
-    400 clamp(33px, 4.7vw, 73px)/1.04 InstrumentSerif_400Regular,
-    Georgia,
-    serif;
+    400 clamp(32px, 3.4vw, 52px)/1.15 ArchivoNarrow_700Bold,
+    Arial,
+    sans-serif;
   letter-spacing: -0.03em;
   color: #f9f6ef;
-  max-width: 27ch;
+  max-width: 36ch;
 }
 .pf-story .st-vision .st-copy {
   color: #b1b5bd;
@@ -710,7 +730,7 @@
 }
 .pf-story .st-contact h2 {
   font-size: 20px;
-  font-family: Manrope_700Bold, Arial, sans-serif;
+  font-family: ArchivoNarrow_700Bold, Arial, sans-serif;
   color: #f6f3ed;
 }
 .pf-story .st-contact-grid {
@@ -721,7 +741,7 @@
 }
 .pf-story .st-contact-person h3 {
   font-size: 14px;
-  font-family: Manrope_700Bold, Arial, sans-serif;
+  font-family: ArchivoNarrow_700Bold, Arial, sans-serif;
   color: #f6f3ed;
   margin-bottom: 12px;
 }
@@ -746,7 +766,7 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  font-family: Manrope_400Regular, Arial, sans-serif;
+  font-family: ArchivoNarrow_400Regular, Arial, sans-serif;
   color: #152238;
   background: #faf9f6;
 }
@@ -756,8 +776,8 @@
   box-sizing: border-box;
 }
 .pf-landing
-  :is(button, .journey h2, h3, h4, b, strong, .stage, .st-platform b) {
-  font-family: Manrope_700Bold, Arial, sans-serif;
+  :is(button, h3, h4, b, strong, .st-platform b) {
+  font-family: ArchivoNarrow_700Bold, Arial, sans-serif;
   font-weight: 400;
 }
 .pf-landing .login {

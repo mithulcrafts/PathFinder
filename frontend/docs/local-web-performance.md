@@ -1,5 +1,52 @@
 # Local web startup investigation
 
+## Follow-up: localhost compression stalls returned
+
+On 2026-11-13, the existing server on port 8082 again delivered compressed
+bundles slowly despite using the project launcher. The browser recorded about
+38 seconds before React mounted and 40 seconds before fonts were ready.
+The standalone HTTP probe reproduced the delay without Google authentication:
+
+| Request on port 8082 | Before | After restarting with loopback bypass |
+| --- | ---: | ---: |
+| Browser-style encoding negotiation | 38,012 ms (Brotli) | 2,855 ms (first bundle, identity) |
+| Explicit gzip negotiation | 39,463 ms (gzip) | 217 ms (warm bundle, identity) |
+| Explicit identity negotiation | 717 ms | 148 ms |
+
+The before-change identity response spent only 16 ms transferring its body;
+the compressed responses spent 36–38 seconds there. This isolates the dominant
+observed delay to the local compressed response path, not the public internet.
+Restarting also improved server response times, so the after measurements include
+both the restart and transport change. The precise cause of recurring worker-pool
+contention has not been established; increasing the pool alone was insufficient.
+
+`scripts/local-web-transport.cjs` now asks Metro to serve uncompressed bundles
+only for loopback web requests with `dev=true`. It preserves the NativeWind
+middleware chain. LAN/native requests and production exports retain their usual
+behavior. The tradeoff is about 9.9 MB over loopback instead of 1.7–1.8 MB
+compressed; no extra internet bandwidth is used for these local bundle requests.
+The same development bundle serves the OAuth callback, so this stall also
+delayed completion of Google sign-in.
+
+Browser startup diagnostics now include `session-ready`, `session-token-ready`,
+and `account-ready`, separating Clerk initialization and backend account sync
+from asset loading without logging credentials or user data.
+
+One authenticated browser navigation after the change measured:
+
+- Bundle response: 240 ms.
+- React mounted: 2,309 ms from navigation start.
+- Fonts ready: 2,747 ms.
+- Clerk session ready: 4,072 ms; token ready: 4,077 ms.
+- Backend account sync complete: 7,633 ms, then navigation to Ask succeeded.
+
+These are development measurements, not a guarantee of sub-second login.
+Account sync alone still took about 3.56 seconds and includes remote Clerk and
+database work. Its individual server stages and Google's interactive login time
+were not measured. Internet conditions can affect those remaining round trips.
+
+## Initial investigation
+
 Measured on 2026-11-11 against `http://localhost:8081/`. HTTP timings below are
 separate from browser startup phases and authenticated login/logout timings.
 

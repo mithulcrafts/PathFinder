@@ -1,4 +1,7 @@
 import { Asset } from 'expo-asset';
+import { useFonts } from 'expo-font';
+import { ArchivoNarrow_400Regular } from '@expo-google-fonts/archivo-narrow/400Regular';
+import { ArchivoNarrow_700Bold } from '@expo-google-fonts/archivo-narrow/700Bold';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import {
   JOURNEY_TAGS,
@@ -233,6 +236,7 @@ function LandingStory() {
           </div>
         </div>
       </section>
+      <div className="st-closing">
       <section className="st-vision">
         <div className="st-inner">
           <p className="st-label">Our vision</p>
@@ -290,11 +294,15 @@ function LandingStory() {
           </p>
         </div>
       </footer>
+      </div>
     </div>
   );
 }
 
 export default function DesktopLanding({ onPressGoogle }: DesktopLandingProps) {
+  // Load these weights only when the desktop homepage is mounted.
+  useFonts({ ArchivoNarrow_400Regular, ArchivoNarrow_700Bold });
+
   return (
     <main className="pf-landing">
       <div className="continuity">
