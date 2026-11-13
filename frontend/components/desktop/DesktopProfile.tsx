@@ -95,8 +95,8 @@ export function DesktopProfile(props: Props) {
       </View>
     </View>
     <View style={styles.footer}>
-      <TouchableOpacity accessibilityRole="button" onPress={props.onSignOut} style={[d.row, { gap: 8, paddingVertical: 6, paddingHorizontal: 4 }]}>
-        <Feather name="log-out" size={13} color={L.terracotta} /><Text style={{ color: L.terracotta, fontFamily: 'Manrope_700Bold', fontSize: 12 }}>Sign out</Text>
+      <TouchableOpacity accessibilityRole="button" accessibilityLabel="Sign out" onPress={props.onSignOut} activeOpacity={0.75} style={styles.signOutButton}>
+        <Feather name="log-out" size={19} color={L.terracotta} /><Text style={{ color: L.terracotta, fontFamily: 'Manrope_700Bold', fontSize: 16 }}>Sign out</Text>
       </TouchableOpacity>
     </View>
   </DesktopPage>;
@@ -113,4 +113,5 @@ const styles = StyleSheet.create({
   invite: { flex: 1, minWidth: 285, backgroundColor: '#E9F0E9', borderWidth: 1, borderColor: '#D3E0D6', borderRadius: 16, paddingHorizontal: 29, paddingVertical: 26 },
   journeyIcon: { width: 43, height: 43, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F7FAF5', borderWidth: 1, borderColor: '#C3D5C6', borderRadius: 12, marginBottom: 20 },
   footer: { alignItems: 'flex-end', paddingVertical: 19, borderTopWidth: 1, borderColor: '#E2E5DE', marginTop: 26 },
+  signOutButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, minHeight: 48, minWidth: 144, paddingVertical: 12, paddingHorizontal: 22, borderWidth: 1, borderColor: '#D9B5A6', borderRadius: 10, backgroundColor: L.terracottaTint },
 });

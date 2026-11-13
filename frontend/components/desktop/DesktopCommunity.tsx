@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import type { CommunityGraph, SearchCommunityUser } from '../../api/community.api';
@@ -39,7 +38,7 @@ function CommunityCard({ user, onViewJourney }: { user: SearchCommunityUser; onV
   const count = typeof user.matchingGoalCount === 'object'
     ? (user.matchingGoalCount as { low: number }).low : user.matchingGoalCount || 0;
   const goals = user.matchingGoalTitles || [];
-  return <View style={[d.card, { padding: 24 }]}>
+  return <View testID="community-journey-card" style={[d.card, { padding: 24, minWidth: 0 }]}>
     <View style={[d.between, { flexWrap: 'wrap', gap: 16, marginBottom: 17 }]}>
       <View style={[d.row, { maxWidth: '100%', flexShrink: 1 }]}>
         <DesktopAvatar imageUrl={user.imageUrl || undefined} initial={(user.username || '?')[0]} />
@@ -79,7 +78,6 @@ function CommunityCard({ user, onViewJourney }: { user: SearchCommunityUser; onV
 }
 
 export function DesktopCommunity(props: Props) {
-  const [listWidth, setListWidth] = useState(0);
   const loading = props.isLoading && !props.isRefreshing;
   return <DesktopPage refreshControl={<RefreshControl refreshing={props.isRefreshing} onRefresh={props.onRefresh} tintColor={L.teal} />}>
     <DesktopHeading title="Community" subtitle="Discover journeys from people pursuing similar goals." />
@@ -104,11 +102,10 @@ export function DesktopCommunity(props: Props) {
         {props.graphExpanded && <VisualGraph nodes={props.graph.nodes} edges={props.graph.edges} />}
       </View>}
       <DesktopSectionTitle title="Recommended Journeys" />
-      <View onLayout={event => setListWidth(event.nativeEvent.layout.width)} style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-start', gap: 20 }}>
-        {props.users.map((user, index) => <View key={user.username || 'user-' + index} style={{ width: listWidth ? (listWidth - 20) / 2 : '48%' }}>
-          <CommunityCard user={user} onViewJourney={() => props.onViewJourney(user.username || 'user')} />
-        </View>)}
-      </View>
+      {/* This component is rendered only on desktop web. Equal grid tracks grow to fit all card content. */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gridAutoRows: '1fr', gap: 20 }}>
+        {props.users.map((user, index) => <CommunityCard key={user.username || 'user-' + index} user={user} onViewJourney={() => props.onViewJourney(user.username || 'user')} />)}
+      </div>
     </>}
   </DesktopPage>;
 }
