@@ -14,7 +14,6 @@ import {
   getTopics, getSubtopics, searchCommunity, SearchCommunityUser,
   getCommunityGraph, CommunityGraph
 } from '../../api/community.api';
-import { useAuth } from '@clerk/clerk-expo';
 import { VisualGraph } from '../../components/community/VisualGraph';
 import { SectionLabel } from '../../components/ui/SectionLabel';
 import { useDesktopLayout } from '../../utils/useDesktopLayout';
@@ -327,7 +326,6 @@ function SkeletonCard() {
 export default function CommunityPage() {
   const desktop = useDesktopLayout();
   const router = useRouter();
-  const { getToken } = useAuth();
   const [graph, setGraph] = useState<CommunityGraph | null>(null);
 
   const [topics, setTopics] = useState<string[]>([]);
@@ -338,33 +336,43 @@ export default function CommunityPage() {
   const [users, setUsers] = useState<SearchCommunityUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [journeyLoadFailed, setJourneyLoadFailed] = useState(false);
+  const [graphLoadFailed, setGraphLoadFailed] = useState(false);
+  const requestId = useRef(0);
 
   const [topicPickerVisible, setTopicPickerVisible] = useState(false);
   const [subtopicPickerVisible, setSubtopicPickerVisible] = useState(false);
   const [graphExpanded, setGraphExpanded] = useState(true);
 
   const fetchData = async () => {
+    const id = ++requestId.current;
     setIsLoading(true);
-    try {
-      const [usersData, graphData] = await Promise.all([
-        searchCommunity({
-          topic: selectedTopic || undefined,
-          subtopic: selectedSubtopic || undefined,
-          limit: 50,
-        }),
-        !selectedTopic ? getCommunityGraph() : Promise.resolve(null)
-      ]);
-      setUsers(usersData);
-      if (!selectedTopic && graphData) {
-        setGraph(graphData);
-      }
-    } catch (e: any) {
-      console.warn('Failed to fetch data:', e);
-      setUsers([]);
-    } finally {
+    setJourneyLoadFailed(false);
+    setGraphLoadFailed(false);
+    const journeysRequest = searchCommunity({
+      topic: selectedTopic || undefined,
+      subtopic: selectedSubtopic || undefined,
+      limit: 50,
+    }).then(settledUsers => {
+      if (id === requestId.current) setUsers(settledUsers);
+    }).catch(error => {
+      if (id !== requestId.current) return;
+      console.warn('Failed to load community journeys:', error);
+      setJourneyLoadFailed(true);
+    }).finally(() => {
+      if (id !== requestId.current) return;
       setIsLoading(false);
       setIsRefreshing(false);
-    }
+    });
+
+    const graphRequest = (selectedTopic ? Promise.resolve(null) : getCommunityGraph()).then(result => {
+      if (id === requestId.current) setGraph(result);
+    }).catch(error => {
+      if (id !== requestId.current) return;
+      console.warn('Failed to load trending paths:', error);
+      setGraphLoadFailed(true);
+    });
+    await Promise.all([journeysRequest, graphRequest]);
   };
 
   useEffect(() => {
@@ -420,7 +428,7 @@ export default function CommunityPage() {
     } else {
       fetchTopics();
     }
-  }, [selectedTopic, selectedSubtopic, getToken]);
+  }, [selectedTopic, selectedSubtopic]);
 
   const handleTopicSelect = (topic: string) => {
     if (selectedTopic === topic) {
@@ -437,14 +445,18 @@ export default function CommunityPage() {
     setSubtopicPickerVisible(false);
   };
 
+  const openCommunityJourney = useCallback((username: string) => {
+    router.push({ pathname: '/u/[username]', params: { username, fromCommunity: 'true' } });
+  }, [router]);
+
   const renderUserCard = useCallback(({ item, index }: { item: SearchCommunityUser; index: number }) => (
     <Animated.View entering={FadeInDown.delay(index * 60).springify().damping(20)}>
       <UserCard
         user={item}
-        onViewJourney={() => router.push(`/u/${item.username || 'user'}`)}
+        onViewJourney={() => openCommunityJourney(item.username || 'user')}
       />
     </Animated.View>
-  ), [router]);
+  ), [openCommunityJourney]);
 
   const isSearchEnabled = selectedTopic != null;
 
@@ -459,10 +471,12 @@ export default function CommunityPage() {
           graphExpanded={graphExpanded}
           isLoading={isLoading}
           isRefreshing={isRefreshing}
+          journeyLoadFailed={journeyLoadFailed}
+          graphLoadFailed={graphLoadFailed}
           onTopicPress={() => setTopicPickerVisible(true)}
           onSubtopicPress={() => setSubtopicPickerVisible(true)}
           onToggleGraph={() => setGraphExpanded(prev => !prev)}
-          onViewJourney={username => router.push(`/u/${username}`)}
+          onViewJourney={openCommunityJourney}
           onRefresh={onRefresh}
         />
       ) : <>
@@ -512,22 +526,11 @@ export default function CommunityPage() {
           <SkeletonCard /><SkeletonCard /><SkeletonCard />
         </View>
       ) : (
-        users.length === 0 ? (
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40, paddingBottom: 80 }}>
-            <Text style={{ fontSize: 48, marginBottom: 16 }}>🌱</Text>
-            <Text style={{ fontFamily: 'Monospace_500Medium', fontSize: 28, color: UI.foreground, textAlign: 'center', marginBottom: 8 }}>
-              {isSearchEnabled ? "No journeys match yet" : "It's quiet here"}
-            </Text>
-            <Text style={{ fontSize: 14, color: UI.fg50, textAlign: 'center', fontFamily: 'Inter_400Regular' }}>
-              {isSearchEnabled ? "Try exploring a different topic or subtopic." : "No journeys have been shared yet. Be the first!"}
-            </Text>
-          </View>
-        ) : (
           <FlatList
             data={users}
             keyExtractor={(item, index) => item.username || `user-${index}`}
             ListHeaderComponent={
-              graph && graph.nodes.length > 0 ? (
+              !selectedTopic && graph && graph.nodes.length > 0 ? (
                 <Animated.View entering={FadeInDown.springify().damping(20)}>
                   <TouchableOpacity
                     activeOpacity={0.8}
@@ -555,13 +558,10 @@ export default function CommunityPage() {
                   </TouchableOpacity>
                   {graphExpanded && graph && graph.nodes.length > 0 && (
                     <Animated.View entering={FadeInDown.springify()}>
-                      <VisualGraph
-                        nodes={graph.nodes}
-                        edges={graph.edges}
-                      />
+                      <VisualGraph {...graph} />
                     </Animated.View>
                   )}
-                  <Text
+                  {!!users.length && <Text
                     style={{
                       fontFamily: 'Monospace_500Medium',
                       fontSize: 24,
@@ -570,10 +570,25 @@ export default function CommunityPage() {
                       marginBottom: 16,
                     }} >
                     Recommended Journeys
-                  </Text>
+                  </Text>}
                 </Animated.View>
               ) : null
             }
+            ListEmptyComponent={!journeyLoadFailed ? (
+              <View style={{ alignItems: 'center', paddingVertical: 32 }}>
+                <Text style={{ fontSize: 18, color: UI.foreground, marginBottom: 8 }}>
+                  {isSearchEnabled ? 'No journeys match yet' : 'No recommended journeys yet'}
+                </Text>
+                {isSearchEnabled && <Text style={{ color: UI.fg50 }}>Try exploring a different topic or subtopic.</Text>}
+              </View>
+            ) : null}
+            ListFooterComponent={journeyLoadFailed || (!selectedTopic && graphLoadFailed) ? (
+              <TouchableOpacity accessibilityRole="button" onPress={onRefresh} style={{ paddingVertical: 18 }}>
+                <Text accessibilityRole="alert" style={{ color: UI.foreground }}>
+                  {journeyLoadFailed ? 'Could not load journeys.' : 'Could not load Trending Paths.'} Tap to retry.
+                </Text>
+              </TouchableOpacity>
+            ) : null}
             renderItem={renderUserCard}
             contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 24 }}
             showsVerticalScrollIndicator={false}
@@ -581,7 +596,6 @@ export default function CommunityPage() {
               <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={UI.accent} />
             }
           />
-        )
       )}
 
       </>}

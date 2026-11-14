@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   Modal, ActivityIndicator, Platform, Image, Share, Alert
@@ -15,13 +15,32 @@ import { WebView } from 'react-native-webview';
 
 export default function PublicProfilePage() {
   const router = useRouter();
-  const { username, fromQuery, imageUrl, expandedDetails } = useLocalSearchParams<{ username: string; fromQuery?: string; imageUrl?: string; expandedDetails?: string; }>();
+  const { username, fromCommunity, fromQuery, imageUrl, expandedDetails, experienceId } = useLocalSearchParams<{
+    username: string; fromCommunity?: string; fromQuery?: string; imageUrl?: string; expandedDetails?: string; experienceId?: string;
+  }>();
+  const goBack = () => {
+    if (fromCommunity === 'true') router.dismissTo('/(tabs)/community');
+    else if (router.canGoBack()) router.back();
+    else router.replace('/');
+  };
 
   const [journey, setJourney] = useState<CommunityJourney | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showGraph, setShowGraph] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const scrollRef = useRef<ScrollView>(null);
+  const contentRef = useRef<View>(null);
+  const targetRef = useRef<View>(null);
+  const scrolledTo = useRef<string | undefined>(undefined);
+  const scrollToExperience = useCallback(() => {
+    if (!experienceId || scrolledTo.current === experienceId || !contentRef.current) return;
+    targetRef.current?.measureLayout(contentRef.current, (_x, y) => {
+      if (!scrollRef.current || scrolledTo.current === experienceId) return;
+      scrolledTo.current = experienceId;
+      scrollRef.current.scrollTo({ y: Math.max(0, y - 12), animated: false });
+    });
+  }, [experienceId]);
   const graphHtml = useMemo(
     () => createJourneyGraphHtml(buildJourneyGraphElements(journey, { filterMissingTransitions: true })),
     [journey],
@@ -181,6 +200,9 @@ export default function PublicProfilePage() {
         <TouchableOpacity onPress={fetchJourney} style={{ backgroundColor: L.teal, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 20 }}>
           <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Retry</Text>
         </TouchableOpacity>
+        {fromCommunity === 'true' && <TouchableOpacity accessibilityRole="button" onPress={goBack} style={{ marginTop: 16 }}>
+          <Text style={{ color: L.teal }}>Back to Community</Text>
+        </TouchableOpacity>}
       </View>
     );
   }
@@ -190,7 +212,9 @@ export default function PublicProfilePage() {
       {/* Header */}
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 56, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: L.border, backgroundColor: L.background }}>
         <TouchableOpacity
-          onPress={() => { if (router.canGoBack()) { router.back(); } else { router.replace('/'); } }}
+          accessibilityRole="button"
+          accessibilityLabel={fromCommunity === 'true' ? 'Back to Community' : 'Go back'}
+          onPress={goBack}
           activeOpacity={0.7}
           style={{ width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: L.surface }}
         >
@@ -204,7 +228,9 @@ export default function PublicProfilePage() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 24 }} showsVerticalScrollIndicator={false}>
+      <ScrollView ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={{ padding: 24 }}
+        showsVerticalScrollIndicator={false} onContentSizeChange={scrollToExperience}>
+        <View ref={contentRef} collapsable={false}>
 
         {/* Summary Stat Block */}
         <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: L.tealTint, borderRadius: 16, padding: 20, marginBottom: 16 }}>
@@ -286,8 +312,12 @@ export default function PublicProfilePage() {
                       .filter((title): title is string => !!title)
                     : [];
                   return (
-                    <View key={exp.id} style={{ paddingLeft: 32, position: 'relative', zIndex: 10 }}>
+                    <View key={exp.id} ref={exp.id === experienceId ? targetRef : undefined}
+                      onLayout={exp.id === experienceId ? scrollToExperience : undefined}
+                      collapsable={exp.id !== experienceId} style={{ paddingLeft: 32, position: 'relative', zIndex: 10 }}>
                       <ExpandableExperienceCard
+                        key={exp.id === experienceId ? 'linked' : 'regular'}
+                        initiallyExpanded={exp.id === experienceId}
                         title={exp.title}
                         previewText={exp.timelineSummary}
                         organization={`${exp.organization || 'TechNova Global'}`}
@@ -309,6 +339,7 @@ export default function PublicProfilePage() {
             </View>
           </View>
         )}
+        </View>
       </ScrollView >
 
       {/* Graph Modal */}

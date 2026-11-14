@@ -17,28 +17,28 @@ import { Feather } from '@expo/vector-icons';
 
 const SUGGESTED_QUESTIONS = [
   {
-    label: "Which open-source tools helped early-career engineers prove their coding skills off campus?",
-    prompt: "Instead of building standard clone apps or simple layout designs, what unique open-source developer utilities and tracking dashboards have early-career engineers built to prove their low-level coding skills off-campus?",
+    label: "How did bootstrapped SaaS founders find their first paying customers?",
+    prompt: "How did bootstrapped B2B SaaS founders find their first paying customers? Compare customer interviews, manual onboarding, and audience-led launches.",
   },
   {
-    label: "Which build and queue setups helped teams speed up data delivery?",
-    prompt: "When scaling data delivery tiers, what specific automated build configurations, non-blocking queue setups, and multi-platform compilation rules were implemented to ensure fast execution speeds?",
+    label: "What did SaaS founders learn before building their MVP?",
+    prompt: "How did bootstrapped B2B SaaS founders use customer discovery to decide what to build into their first MVP, and what did they learn from launching it?",
   },
   {
-    label: "How did self-taught developers turn technical outreach into interviews?",
-    prompt: "How have self-taught developers transformed their professional applications from generic, blind messaging into data-driven technical consultation notes that win direct technical interviews?",
+    label: "How did students turn open-source projects into internships?",
+    prompt: "How did college students build experience for open-source internships such as Linux Foundation LFX? Look at open-source contributions, student projects, and hackathons.",
   },
   {
-    label: "How did engineers process dense data without running out of memory?",
-    prompt: "What core algorithmic strategies, bit manipulations, and custom array allocation frameworks do developers rely on when they need to process dense, multi-layered data rows without creating system memory drops?",
+    label: "How did founders test demand before launching their SaaS?",
+    prompt: "How did SaaS founders test demand before launching their first product? Look at examples of building in public, using presale waitlists, and launching an MVP.",
   },
   {
-    label: "How did bootstrapped SaaS and edtech founders grow past ₹50 lakh a year without heavy ad spend?",
-    prompt: "How did self-funded or bootstrapped founders scale their SaaS or edtech platforms past the 50 LPA milestone without spending heavy capital on traditional ad agencies?",
+    label: "How did Zoho train people for software careers without degree requirements?",
+    prompt: "How did Zoho University train people for software careers without requiring a degree, and how did Zoho expand that training beyond its original program?",
   },
   {
-    label: "What do engineers work on after learning to scale infrastructure?",
-    prompt: "Once a software engineer moves past basic application frameworks and masters low-level infrastructure scaling, what complex systems-level goals do they typically target next?",
+    label: "How did Zerodha grow by changing brokerage pricing?",
+    prompt: "How did Zerodha use flat-fee brokerage and zero-brokerage equity delivery to attract retail investors and grow its fintech business?",
   },
 ];
 

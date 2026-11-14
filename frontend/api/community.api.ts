@@ -36,6 +36,15 @@ export interface GraphEdge {
 export interface CommunityGraph {
   nodes: GraphNode[];
   edges: GraphEdge[];
+  paths?: RankedCommunityPath[];
+}
+
+export interface RankedCommunityPath {
+  id: string;
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+  recentVoters: number;
+  lifetimeVoters: number;
 }
 
 export async function getCommunityGraph(limit = 20): Promise<CommunityGraph> {

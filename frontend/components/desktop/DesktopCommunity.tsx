@@ -13,6 +13,8 @@ type Props = {
   graphExpanded: boolean;
   isLoading: boolean;
   isRefreshing: boolean;
+  journeyLoadFailed: boolean;
+  graphLoadFailed: boolean;
   onTopicPress: () => void;
   onSubtopicPress: () => void;
   onToggleGraph: () => void;
@@ -84,24 +86,33 @@ export function DesktopCommunity(props: Props) {
     <View style={[d.row, { marginBottom: 22 }]}>
       <Filter label="Topic" value={props.selectedTopic} onPress={props.onTopicPress} />
       <Filter label="Subtopic" value={props.selectedSubtopic} disabled={!props.selectedTopic} onPress={props.onSubtopicPress} />
-      {!loading && <Text style={[d.small, { flex: 1, textAlign: 'right' }]}>{props.users.length} {props.users.length === 1 ? 'journey' : 'journeys'} found</Text>}
+      {!loading && !props.journeyLoadFailed && <Text style={[d.small, { flex: 1, textAlign: 'right' }]}>{props.users.length} {props.users.length === 1 ? 'journey' : 'journeys'} found</Text>}
     </View>
     {loading ? <View style={{ gap: 16 }}>
       {[0, 1, 2].map(index => <View key={index} style={[d.card, { height: 200, backgroundColor: '#F0F3EE', opacity: 0.5 }]} />)}
-    </View> : props.users.length === 0 ? <View style={{ alignItems: 'center', padding: 70 }}>
-      <Text style={{ fontSize: 48, marginBottom: 16 }}>🌱</Text>
-      <Text style={[d.heading, { marginBottom: 8 }]}>{props.selectedTopic ? 'No journeys match yet' : "It's quiet here"}</Text>
-      <Text style={d.body}>{props.selectedTopic ? 'Try exploring a different topic or subtopic.' : 'No journeys have been shared yet. Be the first!'}</Text>
     </View> : <>
-      {props.graph && props.graph.nodes.length > 0 && <View style={{ marginBottom: 28 }}>
+      {!props.selectedTopic && props.graph && props.graph.nodes.length > 0 && <View style={{ marginBottom: 28 }}>
         <TouchableOpacity accessibilityRole="button" accessibilityLabel="Trending Paths" accessibilityState={{ expanded: props.graphExpanded }}
           activeOpacity={0.8} onPress={props.onToggleGraph} style={[d.between, { marginBottom: props.graphExpanded ? 15 : 0 }]}>
           <Text accessibilityRole="header" style={d.heading}>Trending Paths</Text>
           <Feather name={props.graphExpanded ? 'chevron-up' : 'chevron-down'} size={18} color={L.teal} />
         </TouchableOpacity>
-        {props.graphExpanded && <VisualGraph nodes={props.graph.nodes} edges={props.graph.edges} />}
+        {props.graphExpanded && <VisualGraph {...props.graph} />}
       </View>}
-      <DesktopSectionTitle title="Recommended Journeys" />
+      {!props.selectedTopic && props.graphLoadFailed && <View style={[d.row, { marginBottom: 18 }]}>
+        <Text accessibilityRole="alert" style={d.body}>Could not load Trending Paths.</Text>
+        <DesktopButton label="Retry" onPress={props.onRefresh} />
+      </View>}
+      {props.journeyLoadFailed && <View style={[d.row, { marginBottom: 18 }]}>
+        <Text accessibilityRole="alert" style={d.body}>Could not load journeys.</Text>
+        <DesktopButton label="Retry" onPress={props.onRefresh} />
+      </View>}
+      {!props.journeyLoadFailed && props.users.length === 0 && <View style={{ alignItems: 'center', padding: 70 }}>
+        <Text style={{ fontSize: 48, marginBottom: 16 }}>🌱</Text>
+        <Text style={[d.heading, { marginBottom: 8 }]}>{props.selectedTopic ? 'No journeys match yet' : 'No recommended journeys yet'}</Text>
+        <Text style={d.body}>{props.selectedTopic ? 'Try exploring a different topic or subtopic.' : 'Check back as more journeys are shared.'}</Text>
+      </View>}
+      {props.users.length > 0 && <DesktopSectionTitle title="Recommended Journeys" />}
       {/* This component is rendered only on desktop web. Equal grid tracks grow to fit all card content. */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gridAutoRows: '1fr', gap: 20 }}>
         {props.users.map((user, index) => <CommunityCard key={user.username || 'user-' + index} user={user} onViewJourney={() => props.onViewJourney(user.username || 'user')} />)}

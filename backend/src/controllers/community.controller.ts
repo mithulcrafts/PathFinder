@@ -145,7 +145,8 @@ export async function getGraphController(
   res: Response
 ): Promise<void> {
   try {
-    const limit = typeof req.query.limit === "string" ? Number(req.query.limit) : 20;
+    const requestedLimit = typeof req.query.limit === "string" ? Number(req.query.limit) : 20;
+    const limit = Number.isInteger(requestedLimit) ? Math.max(1, Math.min(20, requestedLimit)) : 20;
 
     const { getGraph } = await import("../processors/community/getGraph.processor.js");
     const graph = await getGraph(limit);
