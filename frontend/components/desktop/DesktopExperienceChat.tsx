@@ -62,10 +62,10 @@ export function DesktopExperienceChat({ messages, helperMessage, input, onChange
             {!!helperMessage && <Text style={styles.description}>{helperMessage.trim()}</Text>}
             <View style={styles.samples}>
               <Text style={styles.label}>Try a sample</Text>
-              <Text style={styles.description}>Choose a fictional example to send it to the chat.</Text>
+              <Text style={styles.description}>Choose a fictional example to fill the message box. You can edit it before sending.</Text>
               <View style={styles.sampleButtons}>
                 {samples.map(sample => (
-                  <DesktopButton key={sample.title} label={sample.title} icon="message-circle" disabled={busy} onPress={() => onSend(sample.text)} />
+                  <DesktopButton key={sample.title} label={sample.title} icon="message-circle" disabled={busy} onPress={() => onChangeInput(sample.text)} />
                 ))}
               </View>
             </View>
