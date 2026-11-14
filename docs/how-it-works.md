@@ -20,8 +20,8 @@ Users begin onboarding with a prompt asking them to describe their career or ent
 ```
 "I started as a System Engineer at TCS, but I wanted to move into product engineering. Over the next four months I focused on system design, built a distributed error tracking platform, and eventually secured a backend role at Vercel."
 ```
-* **Conversational Context**: Each submitted message is stored in the onboarding session. The extractor receives only the latest message, not the stored conversation history; the current processor returns a draft rather than an AI follow-up question.
-* **Session Persistence**: **Upstash Redis** retains session history and the latest draft for 24 hours. Storing history does not itself make extraction context-aware.
+* **Conversational Context**: The extractor receives the current draft, the eight most recent user messages, and the latest message. Follow-up turns return field updates, additions, or explicit removals. The server applies those changes to the existing draft and keeps experience IDs stable.
+* **Session Persistence**: **Upstash Redis** retains session history and the latest draft for 24 hours. In the desktop form, direct edits and proof attachments stay local until submission. Chat updates replace only the affected draft fields.
 
 ---
 
@@ -53,7 +53,7 @@ The submitted narrative is sent to the **Gemini structured extractor**. Voice in
   ```
 * **Draft Verification UI**: The extracted draft is sent to the client. The user reviews the experience cards inside the Expo App form, modifies dates, associates goals, and adds verification links.
 * **Editable Journey Forms**: The generated draft is automatically populated into Goal and Experience forms inside the Expo application. Users can review, modify, or enrich the extracted information before submission.
-* **Proof Attachment**: Users can add GitHub, PDF or image proof metadata. The current multipart endpoint accepts one uploaded file named `proof`; it does not accept independent uploaded files for every proof. Verification happens before experiences are persisted in Neo4j.
+* **Proof Attachment**: The multipart endpoint accepts one uploaded file named `proof` up to 10 MB. The inline verifier checks GitHub, PDF, and supported image evidence before saving experiences. Missing or unsupported evidence can be saved without verification. Provider or processing failures are distinct from an unsuccessful check in the owner's desktop Journey. Desktop mock verification skips analysis and saves an owner-only Verified result.
 
 ---
 

@@ -47,3 +47,14 @@ export function formatToMonthYear(dateStr: string | null | undefined): string {
   const month = months[monthIndex];
   return month ? `${month}-${year}` : dateStr;
 }
+
+export function sortJourneyExperiences<T extends { startDate: string; endDate?: string | null }>(
+  experiences: readonly T[],
+): T[] {
+  return [...experiences].sort((a, b) => {
+    if (!a.endDate && b.endDate) return -1;
+    if (a.endDate && !b.endDate) return 1;
+    return (b.endDate ?? b.startDate).localeCompare(a.endDate ?? a.startDate)
+      || b.startDate.localeCompare(a.startDate);
+  });
+}

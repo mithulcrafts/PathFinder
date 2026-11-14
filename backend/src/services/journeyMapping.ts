@@ -42,7 +42,7 @@ export function mapJourneyExperience(
     organization: experience.organization ?? null,
     applicationStatus: experience.applicationStatus ?? null,
     achievements: experience.achievements ?? null,
-    isVerified: experience.isVerified ?? false,
+    isVerified: !experience.verificationMocked && (experience.isVerified ?? false),
     timelineSummary: experience.timelineSummary,
     goalIds: [],
     skills: skills
@@ -51,6 +51,15 @@ export function mapJourneyExperience(
         name: skill.properties.name,
         type: skill.properties.type,
       })),
+  };
+}
+
+export function mapOwnerJourneyExperience(record: JourneyRecord): Omit<JourneyExperience, "proofs"> {
+  const experience = record.get("e").properties;
+  return {
+    ...mapJourneyExperience(record),
+    ...(experience.verificationStatus !== undefined && { verificationStatus: experience.verificationStatus }),
+    ...(experience.verificationMocked !== undefined && { verificationMocked: experience.verificationMocked }),
   };
 }
 

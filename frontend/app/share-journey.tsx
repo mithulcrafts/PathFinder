@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import {
   View, Text, FlatList, TextInput,
   TouchableOpacity, KeyboardAvoidingView, Platform,
-  ActivityIndicator, Alert, SafeAreaView, ScrollView, Modal
+  ActivityIndicator, Alert, SafeAreaView, ScrollView, Modal, Switch
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@clerk/clerk-expo';
@@ -12,6 +12,9 @@ import { Feather } from '@expo/vector-icons';
 import Animated, { FadeIn, FadeInDown, FadeInUp, Layout } from 'react-native-reanimated';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
+import { useDesktopLayout } from '../utils/useDesktopLayout';
+import { DesktopExperienceChat } from '../components/desktop/DesktopExperienceChat';
+import { DesktopButton } from '../components/desktop/DesktopUI';
 
 interface ChatMessage {
   id: string;
@@ -22,6 +25,8 @@ interface ChatMessage {
 export default function ShareJourneyPage() {
   const router = useRouter();
   const { getToken } = useAuth();
+  const desktop = useDesktopLayout();
+  const [mockVerification, setMockVerification] = useState(false);
 
   const displayAlert = (title: string, message: string, onPress?: () => void) => {
     if (Platform.OS === 'web') {
@@ -44,12 +49,18 @@ export default function ShareJourneyPage() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
+  const [sessionError, setSessionError] = useState<string | null>(null);
+  const [sessionAttempt, setSessionAttempt] = useState(0);
+  const [draftNotice, setDraftNotice] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [journeyDraft, setJourneyDraft] = useState<any>(null);
   const [editableExperiences, setEditableExperiences] = useState<any[]>([]);
   const [userGoals, setUserGoals] = useState<any[]>([]);
   const flatListRef = useRef<FlatList>(null);
+  const sendingMessage = useRef(false);
+  const messageSequence = useRef(0);
+  const hasOpenedDraft = useRef(false);
 
   const [newGoalTitle, setNewGoalTitle] = useState('');
   const [newGoalDesc, setNewGoalDesc] = useState('');
@@ -164,38 +175,45 @@ export default function ShareJourneyPage() {
 
   useEffect(() => {
     async function initSession() {
+      setIsInitializing(true);
+      setSessionError(null);
       try {
         const token = await getToken();
         if (!token) throw new Error('Unauthenticated');
-
-        try {
-          const journeyData = await getUserJourney(token);
-          if (journeyData && journeyData.goals) {
-            setUserGoals(journeyData.goals);
-          }
-        } catch (e) {
-          console.warn('Failed to load existing goals:', e);
-        }
 
         const res = await startJourneySession(token);
         if (res.success && res.conversationId) {
           setConversationId(res.conversationId);
           setMessages([{ id: Date.now().toString(), text: res.message, sender: 'ai' }]);
+          void getUserJourney(token).then(({ goals }) => {
+            setUserGoals(current => {
+              const byId = new Map(goals.map(goal => [goal.id, goal]));
+              for (const goal of current) byId.set(goal.id, goal);
+              return [...byId.values()];
+            });
+          }).catch(error => console.warn('Failed to load existing goals:', error));
+        } else {
+          throw new Error('No journey session returned');
         }
       } catch (err) {
         console.warn('Failed to start journey session', err);
+        setSessionError(err instanceof Error && err.message === 'Unauthenticated'
+          ? 'Sign in to start an experience.'
+          : 'Could not start the chat. Try again.');
       } finally {
         setIsInitializing(false);
       }
     }
     initSession();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [sessionAttempt]);
 
-  const sendMessage = async () => {
-    if (!inputText.trim() || !conversationId) return;
-    const userText = inputText;
-    const userMsg: ChatMessage = { id: Date.now().toString(), text: userText, sender: 'user' };
+  const sendMessage = async (text: string) => {
+    const userText = text.trim();
+    if (!userText || !conversationId || sendingMessage.current || isSubmitting) return;
+    sendingMessage.current = true;
+    const turn = ++messageSequence.current;
+    const userMsg: ChatMessage = { id: `user-${turn}`, text: userText, sender: 'user' };
 
     setMessages(prev => [...prev, userMsg]);
     setInputText('');
@@ -208,22 +226,62 @@ export default function ShareJourneyPage() {
 
       const res = await sendJourneyMessage(token, conversationId, userText);
       if (res.success) {
+        const experiences = res.journeyDraft.experiences;
+        const firstDraft = !editableExperiences.length && experiences.length > 0;
+        const notice = res.extractionUnavailable
+          ? firstDraft
+            ? 'Automatic fill took too long or was unavailable. Your message is in the description. Fill in the remaining fields or try again in chat.'
+            : 'Automatic fill was unavailable. Your draft is still saved. You can retry your message or edit the form.'
+          : firstDraft && experiences.some(experience => experience.title === 'Untitled experience')
+            ? 'Your message is in the description. Add a title and fill in the remaining details.'
+            : null;
+        setDraftNotice(notice);
+        if (res.extractionUnavailable && !firstDraft) setInputText(userText);
+        const draftChanged = !res.changedFields ||
+          Object.values(res.changedFields).some(fields => fields.length > 0) ||
+          experiences.length !== editableExperiences.length ||
+          experiences.some(experience => !editableExperiences.some(current => current.id === experience.id));
         setJourneyDraft(res.journeyDraft);
-        setEditableExperiences(res.journeyDraft?.experiences || []);
-        setUserGoals(res.journeyDraft?.goals || []);
+        setEditableExperiences(current => {
+          const currentById = new Map(current.map(experience => [experience.id, experience]));
+          return experiences.map(experience => {
+            const edited = currentById.get(experience.id);
+            if (!edited || !res.changedFields) return experience;
+            const updated = { ...edited };
+            for (const field of res.changedFields[experience.id] ?? []) {
+              updated[field] = experience[field];
+            }
+            return updated;
+          });
+        });
+        setUserGoals(current => {
+          const goals = new Map(current.map(goal => [goal.id, goal]));
+          for (const goal of res.journeyDraft.goals) goals.set(goal.id, goal);
+          return [...goals.values()];
+        });
         setMessages(prev => [...prev, {
-          id: Date.now().toString(),
+          id: `assistant-${turn}`,
           sender: 'ai',
-          text: "Got it! I've updated your journey draft. Keep telling me more, or switch to the Form view when you're ready to review."
+          text: notice ?? (experiences.length
+            ? draftChanged
+              ? 'I updated your draft. You can keep chatting or review the changes in the form.'
+              : 'The draft is unchanged. Name the experience and tell me what you want to update.'
+            : 'There are no experiences in the draft. You can describe another one here.'),
         }]);
-        setActiveTab('form');
+        if (experiences.length && (!desktop || !hasOpenedDraft.current)) {
+          hasOpenedDraft.current = true;
+          setActiveTab('form');
+        }
       } else {
         throw new Error("Failed to process message");
       }
     } catch (err: any) {
       console.warn('Failed to send message:', err);
+      setMessages(prev => prev.filter(message => message.id !== userMsg.id));
+      setInputText(current => current || userText);
       displayAlert("Error", "Could not process your message. Please try again.");
     } finally {
+      sendingMessage.current = false;
       setIsLoading(false);
     }
   };
@@ -239,7 +297,7 @@ export default function ShareJourneyPage() {
       const token = await getToken();
       if (!token) throw new Error("Not authenticated");
 
-      const payload = { ...journeyDraft, experiences: editableExperiences };
+      const payload = { ...journeyDraft, ...(desktop ? { mockVerification } : {}) };
 
       // Extract files to upload
       let fileToUpload: | { id: string; uri: string; name: string; type: string; } | undefined;
@@ -247,9 +305,13 @@ export default function ShareJourneyPage() {
         const { tempGoalInput, ...cleanedExp } = exp;
         // Convert empty decisionReason to null
         cleanedExp.decisionReason = cleanedExp.decisionReason?.trim() || null;
+        cleanedExp.endDate = cleanedExp.endDate?.trim() || null;
         if (cleanedExp.proofs) {
           cleanedExp.proofs = cleanedExp.proofs.map((p: any) => {
             if (p.localUri) {
+              if (desktop && fileToUpload) {
+                throw new Error('Attach up to one photo or document per submission.');
+              }
               fileToUpload = {
                 id: p.id,
                 uri: p.localUri,
@@ -270,9 +332,13 @@ export default function ShareJourneyPage() {
 
       const res = await submitJourney(token, conversationId, payload, fileToUpload);
       if (res.success) {
+        if (desktop) {
+          router.replace('/(tabs)/journey');
+          return;
+        }
         displayAlert(
           "Journey Saved! 🚀",
-          "Your experiences have been verified and added to your Life Graph.",
+          "Your experiences have been added to your Life Graph.",
           () => router.replace('/(tabs)/journey')
         );
       } else {
@@ -330,9 +396,13 @@ export default function ShareJourneyPage() {
 
     return (
       <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }} showsVerticalScrollIndicator={false}>
-        <Text style={{ color: '#0F172A', fontFamily: 'Monospace_600Bold', letterSpacing: -0.5, fontSize: 32, marginBottom: 8 }}>
-          Review & Edit Draft
-        </Text>
+          <View style={desktop ? { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 14 } : undefined}>
+          <Text style={{ color: '#0F172A', fontFamily: 'Monospace_600Bold', letterSpacing: -0.5, fontSize: 32, marginBottom: 8 }}>
+            Review & Edit Draft
+          </Text>
+          {desktop && <DesktopButton label="Continue in chat" icon="message-circle" disabled={isSubmitting} onPress={() => setActiveTab('chat')} />}
+        </View>
+        {draftNotice && <Text accessibilityRole="alert" style={{ color: L.navy }}>{draftNotice}</Text>}
 
         {/* Goal Form Section */}
         <View style={{ backgroundColor: '#FFFFFF', borderRadius: 16, padding: 20, borderWidth: 1, borderColor: '#EAE7E0', marginBottom: 8 }}>
@@ -378,7 +448,7 @@ export default function ShareJourneyPage() {
 
         {experiences.map((exp: any, index: number) => (
           <Animated.View
-            key={index}
+            key={exp.id}
             entering={FadeInDown.delay(index * 100).duration(400)}
             style={{
               backgroundColor: '#FFFFFF',
@@ -403,6 +473,19 @@ export default function ShareJourneyPage() {
                 placeholderTextColor="#94A3B8"
               />
             </View>
+
+            {desktop && (
+              <View>
+                <Text style={{ color: '#4A5568', fontFamily: 'Inter_500Medium', fontSize: 13, marginBottom: 6 }}>Organization</Text>
+                <TextInput
+                  style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#EAE7E0', borderRadius: 12, padding: 14, color: '#0F172A', fontFamily: 'Inter_400Regular', fontSize: 15 }}
+                  value={exp.organization || ''}
+                  onChangeText={value => updateExperience(index, 'organization', value.trim() ? value : null)}
+                  placeholder="Organization name"
+                  placeholderTextColor="#94A3B8"
+                />
+              </View>
+            )}
 
             <View>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
@@ -499,6 +582,32 @@ export default function ShareJourneyPage() {
                 textAlignVertical="top"
               />
             </View>
+            {desktop && (
+              <View style={{ gap: 8 }}>
+                <Text style={{ color: '#4A5568', fontFamily: 'Inter_500Medium', fontSize: 13 }}>Application status</Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                  {(['accepted', 'rejected', 'waitlisted', 'pending'] as const).map(status => (
+                    <TouchableOpacity
+                      key={status}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: exp.applicationStatus === status }}
+                      onPress={() => updateExperience(index, 'applicationStatus', exp.applicationStatus === status ? null : status)}
+                      style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16, backgroundColor: exp.applicationStatus === status ? L.teal : '#F1F5F9' }}
+                    >
+                      <Text style={{ color: exp.applicationStatus === status ? '#fff' : L.navy, textTransform: 'capitalize' }}>{status}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                {exp.achievements?.length > 0 && (
+                  <View style={{ gap: 4 }}>
+                    <Text style={{ color: '#4A5568', fontFamily: 'Inter_500Medium', fontSize: 13 }}>Achievements</Text>
+                    {exp.achievements.map((achievement: string, index: number) => (
+                      <Text key={index} style={{ color: L.navy }}>• {achievement}</Text>
+                    ))}
+                  </View>
+                )}
+              </View>
+            )}
             <View>
               <Text style={{ color: '#4A5568', fontFamily: 'Inter_500Medium', fontSize: 13, marginBottom: 6 }}>What led you to this experience?</Text>
               <TextInput
@@ -576,6 +685,24 @@ export default function ShareJourneyPage() {
           </Animated.View>
         ))}
 
+        {desktop && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+            <Switch
+              accessibilityLabel="Mock verification"
+              accessibilityHint="Turning this on skips the verification check."
+              value={mockVerification}
+              onValueChange={setMockVerification}
+              disabled={isSubmitting}
+            />
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: L.navy, fontFamily: 'Inter_600SemiBold' }}>Mock verification</Text>
+              <Text style={{ color: '#4A5568' }}>
+                Turning this on skips the verification check and shows Verified only in your desktop Journey. With it off, proof is checked when you submit.
+              </Text>
+            </View>
+          </View>
+        )}
+
         <TouchableOpacity
           style={{
             backgroundColor: L.teal,
@@ -590,7 +717,10 @@ export default function ShareJourneyPage() {
           disabled={isSubmitting}
         >
           {isSubmitting ? (
-            <ActivityIndicator color="#FFFFFF" />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <ActivityIndicator color="#FFFFFF" />
+              {desktop && <Text style={{ color: '#FFFFFF' }}>{mockVerification ? 'Saving…' : 'Checking proof and saving…'}</Text>}
+            </View>
           ) : (
             <Text style={{ color: '#FFFFFF', fontFamily: 'Inter_600SemiBold', fontSize: 16 }}>
               Approve & Submit Journey
@@ -628,6 +758,7 @@ export default function ShareJourneyPage() {
           }}>
             <TouchableOpacity
               onPress={() => setActiveTab('chat')}
+              disabled={isSubmitting}
               style={{
                 flexDirection: 'row', alignItems: 'center', gap: 6,
                 paddingVertical: 8, paddingHorizontal: 16,
@@ -687,9 +818,27 @@ export default function ShareJourneyPage() {
           <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
             <ActivityIndicator color={UI.accent} />
           </View>
+        ) : desktop && sessionError ? (
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', gap: 14 }}>
+            <Text accessibilityRole="alert" style={{ color: L.navy }}>{sessionError}</Text>
+            {sessionError === 'Sign in to start an experience.'
+              ? <DesktopButton label="Go to sign in" onPress={() => router.replace('/')} />
+              : <DesktopButton label="Retry" onPress={() => setSessionAttempt(attempt => attempt + 1)} />}
+          </View>
         ) : (
           <View style={{ flex: 1 }}>
-            {activeTab === 'chat' ? (
+            {activeTab === 'chat' && desktop && conversationId ? (
+              <DesktopExperienceChat
+                messages={messages.slice(1)}
+                helperMessage={messages[0]?.text ?? ''}
+                input={inputText}
+                onChangeInput={setInputText}
+                onSend={sendMessage}
+                onReview={() => setActiveTab('form')}
+                hasDraft={editableExperiences.length > 0}
+                busy={isLoading || isSubmitting}
+              />
+            ) : activeTab === 'chat' ? (
               messages.length <= 1 ? (
                 <View style={{ flex: 1, justifyContent: 'space-between', paddingHorizontal: 24, paddingTop: Platform.OS === 'web' ? 48 : 32, paddingBottom: Platform.OS === 'web' ? 40 : 24 }}>
                   <View>
@@ -710,7 +859,7 @@ export default function ShareJourneyPage() {
                       editable={!isLoading}
                     />
                     <TouchableOpacity
-                      onPress={sendMessage}
+                      onPress={() => sendMessage(inputText)}
                       disabled={isLoading || !inputText.trim()}
                       style={{ position: 'absolute', top: 14, right: 14, width: 34, height: 34, borderRadius: 17, justifyContent: 'center', alignItems: 'center', backgroundColor: inputText.trim() ? '#D06757' : '#F1F5F9', }}>
                       <Feather
@@ -763,7 +912,7 @@ export default function ShareJourneyPage() {
                     />
                     <TouchableOpacity
                       style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: inputText.trim() ? '#D06757' : '#F1F5F9', justifyContent: 'center', alignItems: 'center' }}
-                      onPress={sendMessage}
+                      onPress={() => sendMessage(inputText)}
                       disabled={isLoading || !inputText.trim()}
                     >
                       <Feather name="arrow-up" size={20} color={inputText.trim() ? '#FFFFFF' : '#94A3B8'} />

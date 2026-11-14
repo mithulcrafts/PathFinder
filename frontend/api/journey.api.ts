@@ -15,6 +15,8 @@ export interface JourneyExperience {
   applicationStatus: string | null;
   achievements: string[];
   isVerified: boolean;
+  verificationStatus?: 'pending' | 'verified' | 'rejected' | 'failed';
+  verificationMocked?: boolean;
   goalIds: string[];
   skills: { name: string; type: string | null }[];
   proofs: { id: string; sourceType: string; url?: string; localUri?: string; status: string; verifiedAt: string | null; reason: string | null; filename?: string; mimeType?: string }[];
@@ -71,9 +73,21 @@ export interface StartJourneyResponse {
   conversationId: string;
 }
 
+export type JourneyItemKind = 'experience' | 'goal';
+
+export function completeJourneyItem(token: string, kind: JourneyItemKind, id: string, endDate: string) {
+  return apiFetch<{ endDate: string; status: string | null }>(
+    `/user/journey/${kind}/${encodeURIComponent(id)}/end-date`,
+    { method: 'PATCH', body: JSON.stringify({ endDate }) },
+    token,
+  );
+}
+
 export interface SendMessageResponse {
   success: boolean;
   conversationId: string;
+  changedFields?: Record<string, string[]>;
+  extractionUnavailable?: boolean;
   journeyDraft: {
     goals: JourneyGoal[];
     experiences: any[];
@@ -175,29 +189,22 @@ export async function submitJourney(
       const response = await fetch(file.uri);
       const blob = await response.blob();
 
-      formData.append("proof", blob, file.name);
+      formData.append("proof", blob.type ? blob : blob.slice(0, blob.size, file.type), file.name);
     } else {
       const uploadFile = new File(file.uri);
 
       formData.append("proof", uploadFile, file.name);
     }
 
-    const response = await fetch(
-      `${process.env.EXPO_PUBLIC_API_BASE_URL}/journey/submit`,
+    return apiFetch<SubmitJourneyResponse>(
+      "/journey/submit",
       {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
         body: formData,
-      }
+      },
+      token,
+      true,
     );
-
-    if (!response.ok) {
-      throw new Error(await response.text());
-    }
-
-    return response.json();
   }
 
   return apiFetch<SubmitJourneyResponse>(

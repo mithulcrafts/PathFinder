@@ -57,6 +57,13 @@ export const proofStatusSchema = z.enum([
   "verified",
   "rejected",
   "skipped",
+  "failed",
+]);
+export const experienceVerificationStatusSchema = z.enum([
+  "pending",
+  "verified",
+  "rejected",
+  "failed",
 ]);
 export const applicationStatusSchema = z.enum([
   "accepted",
@@ -104,7 +111,7 @@ export const journeyProofSchema = z
   .object({
     id: z.string().trim().min(1),
     sourceType: proofSourceTypeSchema,
-    url: z.string().trim().min(1),
+    url: z.string().trim().min(1).nullable(),
     status: proofStatusSchema,
     verifiedAt: nullableDateTimeSchema,
     reason: z.string().trim().min(1).nullable().optional(),
@@ -132,6 +139,8 @@ export const journeyExperienceSchema = z
     applicationStatus: applicationStatusSchema.nullable().optional(),
     achievements: z.array(z.string().trim().min(1)).nullable().optional(),
     isVerified: z.boolean().optional(),
+    verificationStatus: experienceVerificationStatusSchema.optional(),
+    verificationMocked: z.boolean().optional(),
     goalIds: z.array(z.string().trim().min(1)),
     skills: z.array(journeySkillSchema),
     proofs: z.array(journeyProofSchema),
@@ -191,6 +200,7 @@ export const submitExperienceSchema = z
 export const submitJourneySchema = z
   .object({
     experiences: z.array(submitExperienceSchema).min(1),
+    mockVerification: z.boolean().optional(),
   })
   .strict();
 

@@ -6,8 +6,8 @@ import {
 
 import { useFocusEffect } from 'expo-router';
 import { useAuth, useUser } from '@clerk/clerk-expo';
-import { getUserJourney, UserJourneyResponse } from '../../api/journey.api';
-import { calculateDuration, formatToMonthYear } from '../../utils/helpers';
+import { completeJourneyItem, getUserJourney, type JourneyItemKind, type UserJourneyResponse } from '../../api/journey.api';
+import { calculateDuration, formatToMonthYear, sortJourneyExperiences } from '../../utils/helpers';
 import { buildJourneyGraphElements, createJourneyGraphHtml } from '../../utils/journeyGraph';
 import { ExpandableGoalCard, ExpandableExperienceCard } from '../../components/journey/ExpandableCards';
 import { L } from '../../constants/colors';
@@ -34,6 +34,7 @@ export default function JourneyPage() {
   const [showGraph, setShowGraph] = useState(false);
   const webViewRef = React.useRef<WebView>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const experiences = useMemo(() => sortJourneyExperiences(journey?.experiences ?? []), [journey?.experiences]);
   const graphHtml = useMemo(
     () => createJourneyGraphHtml(buildJourneyGraphElements(journey), { mode: 'personal', screenWidth }),
     [journey],
@@ -58,6 +59,27 @@ export default function JourneyPage() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleCompleteItem = async (kind: JourneyItemKind, id: string, endDate: string) => {
+    const token = await getToken();
+    if (!token) throw new Error('Not authenticated');
+    const saved = await completeJourneyItem(token, kind, id, endDate);
+    setJourney(current => {
+      if (!current) return current;
+      if (kind === 'goal') {
+        return {
+          ...current,
+          goals: current.goals.map(goal => goal.id === id
+            ? { ...goal, endDate: saved.endDate, status: saved.status ?? goal.status }
+            : goal),
+        };
+      }
+      return {
+        ...current,
+        experiences: current.experiences.map(exp => exp.id === id ? { ...exp, endDate: saved.endDate } : exp),
+      };
+    });
   };
 
   useEffect(() => {
@@ -195,9 +217,11 @@ export default function JourneyPage() {
     <View style={{ flex: 1, backgroundColor: L.background }}>
       {desktop ? (
         <DesktopJourney
-          journey={journey}
+          journey={{ ...journey, experiences }}
           imageUrl={clerkUser?.hasImage ? clerkUser.imageUrl : undefined}
           onViewGraph={() => setShowGraph(true)}
+          onRefresh={loadJourney}
+          onCompleteItem={handleCompleteItem}
         />
       ) : <>
       {/* Header */}
@@ -246,6 +270,9 @@ export default function JourneyPage() {
                 topics={goal.topics || []}
                 subtopics={goal.subtopics || ['Microservices', 'Event-Driven']}
                 duration={calculateDuration(goal.startDate, goal.endDate)}
+                onSetEndDate={!goal.endDate && ['ongoing', 'active'].includes(goal.status?.toLowerCase())
+                  ? date => handleCompleteItem('goal', goal.id, date)
+                  : undefined}
               />
             ))}
           </View>
@@ -263,7 +290,7 @@ export default function JourneyPage() {
                 {/* Timeline Rail */}
                 <View style={{ position: 'absolute', left: 15, top: 0, bottom: 0, width: 2, backgroundColor: 'rgba(62, 107, 102, 0.25)', zIndex: 1 }} />
 
-                {journey.experiences.map((exp) => {
+                {experiences.map((exp) => {
                   const matchingTransition = journey.transitions.find(t => t.toExperienceId === exp.id);
                   const fromExperience = matchingTransition
                     ? journey.experiences.find(e => e.id === matchingTransition.fromExperienceId)
@@ -292,6 +319,7 @@ export default function JourneyPage() {
                         linkedGoalTitles={linkedGoalTitles}
                         transitionLabel={calculatedTransitionLabel}
                         transitionDecision={matchingTransition?.decisionLabel}
+                        onSetEndDate={!exp.endDate ? date => handleCompleteItem('experience', exp.id, date) : undefined}
                       />
                     </View>
                   );

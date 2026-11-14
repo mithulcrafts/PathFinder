@@ -1,7 +1,7 @@
 import type { JourneyExperience, JourneyTransition } from "../processors/journey/journeySchema.js";
 import type { JourneyGoal } from "../types/journey/Journey.types.js";
 import { closeSession, getSession } from "./neo4j.service.js";
-import { attachExperienceGoals, mapJourneyExperience, mapJourneyGoal, mapJourneyTransition } from "./journeyMapping.js";
+import { attachExperienceGoals, mapOwnerJourneyExperience, mapJourneyGoal, mapJourneyTransition } from "./journeyMapping.js";
 
 export interface UpdateProfileInput {
   clerkId: string;
@@ -140,11 +140,12 @@ export async function getUserJourney(
       MATCH (u:User {clerkId: $clerkId})-[:HAS_EXPERIENCE]->(e:Experience)
       OPTIONAL MATCH (e)-[:BUILT_SKILL]->(s:Skill)
       RETURN e, collect(DISTINCT s) AS skills
+      ORDER BY e.startDate DESC, e.id
       `,
       { clerkId }
     );
 
-    const experiences = experiencesResult.records.map(mapJourneyExperience);
+    const experiences = experiencesResult.records.map(mapOwnerJourneyExperience);
     const goalRelationshipResult = await session.run(
       `
       MATCH (u:User {clerkId: $clerkId})-[:HAS_EXPERIENCE]->(e:Experience)-[:CONTRIBUTED_TO]->(g:Goal)
@@ -176,6 +177,50 @@ export async function getUserJourney(
       experiences,
       transitions,
     };
+  } finally {
+    await closeSession(session);
+  }
+}
+
+export async function completeJourneyItem(
+  clerkId: string,
+  kind: "experience" | "goal",
+  id: string,
+  endDate: string,
+) {
+  const session = getSession();
+  const relationship = kind === "goal" ? "HAS_GOAL" : "HAS_EXPERIENCE";
+  const label = kind === "goal" ? "Goal" : "Experience";
+  try {
+    // Lock the item before checking its end date so simultaneous saves cannot overwrite it.
+    const result = await session.run(
+      `
+      MATCH (:User {clerkId: $clerkId})-[:${relationship}]->(item:${label} {id: $id})
+      SET item._completionLock = true
+      REMOVE item._completionLock
+      WITH item, date($endDate) AS requestedDate
+      WITH item, requestedDate,
+        CASE
+          WHEN item.endDate = requestedDate THEN 'saved'
+          WHEN item.endDate IS NOT NULL THEN 'completed'
+          WHEN $isGoal AND NOT (toLower(coalesce(item.status, '')) IN ['ongoing', 'active']) THEN 'completed'
+          WHEN requestedDate < date.truncate('month', item.startDate) THEN 'invalid-date'
+          ELSE 'saved'
+        END AS outcome
+      FOREACH (_ IN CASE WHEN outcome = 'saved' AND item.endDate IS NULL THEN [1] ELSE [] END |
+        SET item.endDate = requestedDate
+        ${kind === "goal" ? ", item.status = 'achieved'" : ""}
+      )
+      RETURN outcome, toString(item.endDate) AS endDate, item.status AS status
+      `,
+      { clerkId, id, endDate, isGoal: kind === "goal" },
+    );
+    const record = result.records[0];
+    return record ? {
+      outcome: record.get("outcome") as "saved" | "completed" | "invalid-date",
+      endDate: record.get("endDate") as string | null,
+      status: record.get("status") as string | null,
+    } : null;
   } finally {
     await closeSession(session);
   }

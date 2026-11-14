@@ -10,7 +10,8 @@ export interface UserSummary {
 }
 
 export async function generateUserSummary(
-  clerkId: string
+  clerkId: string,
+  timeoutMs = 10_000,
 ): Promise<UserSummary> {
   const session = getSession();
   try {
@@ -67,6 +68,7 @@ export async function generateUserSummary(
         subtopics,
       }),
       schema: userSummarySchema,
+      timeoutMs,
     });
   } finally {
     await closeSession(session);

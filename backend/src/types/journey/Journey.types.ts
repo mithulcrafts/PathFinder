@@ -25,7 +25,8 @@ export type SkillType = "Technical" | "Soft" | "Domain" | "ExtraCurricular";
 
 export type ProofSourceType = "image" | "pdf" | "github" | "link";
 
-export type ProofStatus = "pending" | "verified" | "rejected" | "skipped";
+export type ProofStatus = "pending" | "verified" | "rejected" | "skipped" | "failed";
+export type ExperienceVerificationStatus = "pending" | "verified" | "rejected" | "failed";
 
 export type ApplicationStatus = "accepted" | "rejected" | "waitlisted" | "pending";
 
@@ -61,7 +62,7 @@ export interface JourneySkill {
 export interface JourneyProof {
   id: string;
   sourceType: ProofSourceType;
-  url: string;
+  url: string | null;
   status: ProofStatus;
   verifiedAt?: string | null;
   reason?: string | null;
@@ -79,6 +80,8 @@ export interface JourneyExperience {
   applicationStatus: ApplicationStatus | null;
   achievements: string[] | null;
   isVerified: boolean;
+  verificationStatus?: ExperienceVerificationStatus;
+  verificationMocked?: boolean;
   goalIds: string[];
   skills: JourneySkill[];
   proofs: JourneyProof[];
