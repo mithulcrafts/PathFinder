@@ -15,15 +15,16 @@ export const desktopStyles = StyleSheet.create({
   card: { backgroundColor: L.surface, borderWidth: 1, borderColor: '#E2E5DE', borderRadius: 16 },
 });
 
-export function DesktopPage({ children, maxWidth = 1200, refreshControl }: {
+export function DesktopPage({ children, maxWidth = 1200, refreshControl, extraBottomSpace = 0 }: {
   children: ReactNode;
   maxWidth?: number;
   refreshControl?: ComponentProps<typeof ScrollView>['refreshControl'];
+  extraBottomSpace?: number;
 }) {
   const { width } = useWindowDimensions();
   return <ScrollView
     style={{ flex: 1, backgroundColor: L.background }}
-    contentContainerStyle={{ flexGrow: 1, alignItems: 'center', paddingHorizontal: width < 1100 ? 32 : 48, paddingTop: 40, paddingBottom: 72 }}
+    contentContainerStyle={{ flexGrow: 1, alignItems: 'center', paddingHorizontal: width < 1100 ? 32 : 48, paddingTop: 40, paddingBottom: 72 + extraBottomSpace }}
     keyboardShouldPersistTaps="handled"
     refreshControl={refreshControl}
   >

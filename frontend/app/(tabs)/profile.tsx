@@ -170,7 +170,9 @@ export default function ProfilePage() {
           onSaveUsername={handleSaveUsername}
           onUsernameButtonPress={() => { Keyboard.dismiss(); handleSaveUsername(); }}
           languageLabel={LANGUAGES.find(l => l.code === languageCode)?.label || languageCode}
-          onLanguagePress={() => bottomSheetRef.current?.expand()}
+          languageCode={languageCode}
+          languages={LANGUAGES}
+          onSelectLanguage={handleSaveLanguage}
           onAddExperience={() => router.push('/share-journey')}
           onSignOut={handleSignOut}
           showSuccessTick={showSuccessTick}
@@ -316,7 +318,7 @@ export default function ProfilePage() {
       </>}
 
       {/* Bottom Sheet Picker (Language) */}
-      <BottomSheet
+      {!desktop && <BottomSheet
         ref={bottomSheetRef}
         index={-1}
         snapPoints={snapPoints}
@@ -370,7 +372,7 @@ export default function ProfilePage() {
             })}
           </BottomSheetScrollView>
         </View>
-      </BottomSheet>
+      </BottomSheet>}
     </SafeAreaView>
   );
 }

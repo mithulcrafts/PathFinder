@@ -1,3 +1,4 @@
+import { rankTrendingPaths, type PathVote, type RankedCommunityPath } from "./trendingPaths.js";
 import { getSession, closeSession } from "./neo4j.service.js";
 import { attachExperienceGoals, mapJourneyExperience, mapJourneyGoal, mapJourneyTransition } from "./journeyMapping.js";
 
@@ -147,7 +148,7 @@ export async function searchCommunityUsers(
         hasVerifiedExperience, 
         journeyHighlights, 
         journeyScore
-      WHERE size(matchingGoals) > 0
+      WHERE size(matchingGoals) > 0 OR ($topic IS NULL AND $subtopic IS NULL AND size(journeyHighlights) > 0 AND journeyHighlights[0] IS NOT NULL)
 
       WITH
         u,
@@ -434,7 +435,8 @@ export async function toggleUpvote(
         WITH u, e, author, rel
         WITH u, e, author, rel
         WHERE rel IS NULL
-        MERGE (u)-[:UPVOTED]->(e)
+        MERGE (u)-[vote:UPVOTED]->(e)
+        ON CREATE SET vote.createdAt = datetime()
         SET author.reputationScore = coalesce(author.reputationScore, 0) + 2
         RETURN true AS toggledState
       }
@@ -471,63 +473,96 @@ export interface GraphEdge {
   label: string | null;
 }
 
-export async function getTrendingGraph(limit = 20): Promise<{ nodes: GraphNode[]; edges: GraphEdge[] }> {
+export async function getTrendingGraph(limit = 20): Promise<{
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+  paths: RankedCommunityPath[];
+}> {
   const session = getSession();
+  const now = Date.now();
+  const since = new Date(now - 30 * 86_400_000).toISOString();
+  const candidateLimit = Math.max(80, limit * 8);
 
   try {
-    const result = await session.run(
+    const seedResult = await session.run(
       `
-      MATCH (u1:User)-[:HAS_EXPERIENCE]->(e1:Experience)-[t:TRANSITION]->(e2:Experience)<-[:HAS_EXPERIENCE]-(u2:User)
-      
-      WITH e1, e2, t, u1, u2, count { (e1)<-[:UPVOTED]-() } AS e1Upvotes, count { (e2)<-[:UPVOTED]-() } AS e2Upvotes
-      
-      ORDER BY (e1Upvotes + e2Upvotes) DESC, e1.startDate DESC
-      LIMIT toInteger($limit)
-      
-      RETURN 
-        e1.id AS e1Id, e1.title AS e1Title, u1.username AS e1Author, e1Upvotes,
-        e2.id AS e2Id, e2.title AS e2Title, u2.username AS e2Author, e2Upvotes,
-        t.decisionLabel AS decisionLabel
+      MATCH (author:User)-[:HAS_EXPERIENCE]->(seed:Experience)
+      WHERE author.username IS NOT NULL AND NOT coalesce(author.isFlagged, false)
+        AND EXISTS {
+          MATCH (seed)-[:TRANSITION]-(neighbor:Experience)<-[:HAS_EXPERIENCE]-(other:User)
+          WHERE other.username IS NOT NULL AND NOT coalesce(other.isFlagged, false)
+        }
+      WITH DISTINCT seed
+      OPTIONAL MATCH (seed)<-[vote:UPVOTED]-(voter:User)
+      WHERE NOT EXISTS { MATCH (voter)-[:HAS_EXPERIENCE]->(seed) }
+      WITH seed, count(DISTINCT voter) AS lifetime,
+        count(DISTINCT CASE WHEN vote.createdAt >= datetime($since) AND vote.createdAt <= datetime($now) THEN voter END) AS recent
+      WITH seed, lifetime, recent
+      ORDER BY recent DESC, lifetime DESC, seed.startDate DESC, seed.id
+      LIMIT toInteger($candidateLimit)
+      RETURN seed.id AS id
       `,
-      { limit }
+      { since, now: new Date(now).toISOString(), candidateLimit },
     );
+    const seedIds = seedResult.records.map(record => record.get("id") as string);
+    if (!seedIds.length) return { nodes: [], edges: [], paths: [] };
 
-    const nodesMap = new Map<string, GraphNode>();
-    const edges: GraphEdge[] = [];
-
-    for (const record of result.records) {
-      const e1Id = record.get("e1Id");
-      const e2Id = record.get("e2Id");
-
-      if (!nodesMap.has(e1Id)) {
-        nodesMap.set(e1Id, {
-          id: e1Id,
-          title: record.get("e1Title"),
-          authorUsername: record.get("e1Author"),
-          upvoteCount: Number(record.get("e1Upvotes"))
-        });
+    const edgeResult = await session.run(
+      `
+      UNWIND $seedIds AS seedId
+      MATCH (seed:Experience {id: seedId})
+      CALL {
+        WITH seed
+        MATCH (seed)-[transition:TRANSITION]-(neighbor:Experience)
+        WITH DISTINCT transition
+        WITH startNode(transition) AS source, endNode(transition) AS target, transition
+        MATCH (a:User)-[:HAS_EXPERIENCE]->(source), (b:User)-[:HAS_EXPERIENCE]->(target)
+        WHERE a.username IS NOT NULL AND b.username IS NOT NULL
+          AND NOT coalesce(a.isFlagged, false) AND NOT coalesce(b.isFlagged, false)
+        WITH source, target, transition, min(a.username) AS sourceAuthor, min(b.username) AS targetAuthor
+        ORDER BY
+          (CASE WHEN source.id IN $seedIds THEN 1 ELSE 0 END) +
+          (CASE WHEN target.id IN $seedIds THEN 1 ELSE 0 END) DESC,
+          source.id, target.id
+        LIMIT 12
+        RETURN source, target, sourceAuthor, targetAuthor, transition
       }
-
-      if (!nodesMap.has(e2Id)) {
-        nodesMap.set(e2Id, {
-          id: e2Id,
-          title: record.get("e2Title"),
-          authorUsername: record.get("e2Author"),
-          upvoteCount: Number(record.get("e2Upvotes"))
-        });
-      }
-
-      edges.push({
-        fromId: e1Id,
-        toId: e2Id,
-        label: record.get("decisionLabel") || null
-      });
+      RETURN DISTINCT source.id AS fromId, source.title AS fromTitle, sourceAuthor,
+        target.id AS toId, target.title AS toTitle, targetAuthor, transition.decisionLabel AS label
+      ORDER BY fromId, toId, label
+      `,
+      { seedIds },
+    );
+    const nodes = new Map<string, GraphNode>();
+    const edges = new Map<string, GraphEdge>();
+    for (const record of edgeResult.records) {
+      const fromId = record.get("fromId") as string;
+      const toId = record.get("toId") as string;
+      nodes.set(fromId, { id: fromId, title: record.get("fromTitle"), authorUsername: record.get("sourceAuthor"), upvoteCount: 0 });
+      nodes.set(toId, { id: toId, title: record.get("toTitle"), authorUsername: record.get("targetAuthor"), upvoteCount: 0 });
+      const key = JSON.stringify([fromId, toId]);
+      if (!edges.has(key)) edges.set(key, { fromId, toId, label: record.get("label") ?? null });
     }
+    if (!nodes.size) return { nodes: [], edges: [], paths: [] };
 
-    return {
-      nodes: Array.from(nodesMap.values()),
-      edges
-    };
+    const voteResult = await session.run(
+      `
+      UNWIND $ids AS id
+      MATCH (e:Experience {id: id})<-[vote:UPVOTED]-(voter:User)
+      WHERE NOT EXISTS { MATCH (voter)-[:HAS_EXPERIENCE]->(e) }
+      WITH e, voter, max(vote.createdAt) AS latestVote
+      RETURN e.id AS experienceId, elementId(voter) AS voterId, latestVote.epochMillis AS castAt
+      `,
+      { ids: [...nodes.keys()] },
+    );
+    const votes: PathVote[] = voteResult.records.map(record => {
+      const experienceId = record.get("experienceId") as string;
+      const castAt = record.get("castAt");
+      nodes.get(experienceId)!.upvoteCount++;
+      return { experienceId, voterId: record.get("voterId"), castAt: castAt == null ? null : Number(castAt) };
+    });
+    const paths = rankTrendingPaths(seedIds, [...nodes.values()], [...edges.values()], votes, now, limit);
+    return { paths, nodes: paths.flatMap(path => path.nodes), edges: paths.flatMap(path => path.edges) };
   } finally {
     await closeSession(session);
   }

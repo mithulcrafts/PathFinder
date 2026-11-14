@@ -4,7 +4,7 @@ import { PinchGestureHandler, State, ScrollView as GHScrollView } from 'react-na
 import { Feather } from '@expo/vector-icons';
 import Svg, { Defs, Marker, Path } from 'react-native-svg';
 import { useRouter } from 'expo-router';
-import type { GraphNode, GraphEdge } from '../../api/community.api';
+import type { CommunityGraph, RankedCommunityPath } from '../../api/community.api';
 import { L } from '../../constants/colors';
 import {
   groupCommunityPaths, layoutCommunityPath, PATH_CARD_WIDTH, PATH_CARD_HEIGHT,
@@ -16,7 +16,7 @@ const MAX_SCALE = 2.5;
 const INITIAL_SCALE = 0.85;
 const clampScale = (value: number) => Math.min(MAX_SCALE, Math.max(MIN_SCALE, value));
 
-function PathCanvas({ path }: { path: CommunityPath }) {
+function PathCanvas({ path }: { path: CommunityPath | RankedCommunityPath }) {
   const router = useRouter();
   const layout = useMemo(() => layoutCommunityPath(path), [path]);
   const [scale, setScale] = useState(INITIAL_SCALE);
@@ -44,6 +44,13 @@ function PathCanvas({ path }: { path: CommunityPath }) {
             {path.nodes.length} {path.nodes.length === 1 ? 'experience' : 'experiences'}
             {' · '}{path.edges.length} {path.edges.length === 1 ? 'connection' : 'connections'}
           </Text>
+          {'recentVoters' in path && <Text style={styles.metadata}>
+            {path.recentVoters > 0
+              ? `${path.recentVoters} ${path.recentVoters === 1 ? 'person' : 'people'} upvoted this path in the last 30 days`
+              : path.lifetimeVoters > 0
+                ? `Popular · ${path.lifetimeVoters} ${path.lifetimeVoters === 1 ? 'person' : 'people'} upvoted this path`
+                : 'No upvotes yet'}
+          </Text>}
         </View>
       </View>
 
@@ -81,7 +88,10 @@ function PathCanvas({ path }: { path: CommunityPath }) {
                   accessibilityRole="button"
                   accessibilityLabel={`${node.title}. Open ${node.authorUsername || 'this user'}'s journey`}
                   disabled={!node.authorUsername}
-                  onPress={() => router.push({ pathname: '/u/[username]', params: { username: node.authorUsername } })}
+                  onPress={() => router.push({
+                    pathname: '/u/[username]',
+                    params: { username: node.authorUsername, fromCommunity: 'true', experienceId: node.id },
+                  })}
                   style={({ pressed }) => [styles.node, { left: node.x, top: node.y, opacity: pressed ? 0.7 : 1 }]}
                 >
                   <View style={styles.nodeHeading}>
@@ -117,8 +127,8 @@ function PathCanvas({ path }: { path: CommunityPath }) {
   );
 }
 
-export function VisualGraph({ nodes, edges }: { nodes: GraphNode[]; edges: GraphEdge[] }) {
-  const paths = useMemo(() => groupCommunityPaths(nodes, edges), [nodes, edges]);
+export function VisualGraph({ nodes, edges, paths: rankedPaths }: CommunityGraph) {
+  const paths = useMemo(() => rankedPaths ?? groupCommunityPaths(nodes, edges), [rankedPaths, nodes, edges]);
   const [selectedPathId, setSelectedPathId] = useState<string | null>(null);
   const currentIndex = Math.max(0, paths.findIndex(path => path.id === selectedPathId));
   const path = paths[currentIndex];

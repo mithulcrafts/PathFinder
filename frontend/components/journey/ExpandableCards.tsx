@@ -189,6 +189,7 @@ export interface ExpandableExperienceCardProps {
   transitionLabel?: string;
   transitionDecision?: string;
   onSetEndDate?: (endDate: string) => Promise<void>;
+  initiallyExpanded?: boolean;
 }
 
 export function ExpandableExperienceCard({
@@ -206,8 +207,9 @@ export function ExpandableExperienceCard({
   transitionLabel,
   transitionDecision,
   onSetEndDate,
+  initiallyExpanded = false,
 }: ExpandableExperienceCardProps) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(initiallyExpanded);
 
   const toggle = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -244,7 +246,8 @@ export function ExpandableExperienceCard({
       />
 
       {/* Tap Target Area Header */}
-      <TouchableOpacity onPress={toggle} activeOpacity={0.8} style={{ paddingBottom: expanded ? 6 : 0 }}>
+      <TouchableOpacity accessibilityRole="button" accessibilityLabel={title} accessibilityState={{ expanded }}
+        onPress={toggle} activeOpacity={0.8} style={{ paddingBottom: expanded ? 6 : 0 }}>
         <View style={{ flex: 1, paddingLeft: 6, paddingRight: 12 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <View style={{ flex: 1, paddingLeft: 6, paddingRight: 12 }}>
