@@ -6,6 +6,13 @@ import { calculateDuration, formatToMonthYear } from '../../utils/helpers';
 import { L } from '../../constants/colors';
 import { DesktopAvatar, DesktopBadge, DesktopButton, DesktopChips, DesktopHeading, DesktopPage, DesktopSectionTitle, desktopStyles as d } from './DesktopUI';
 
+const verificationLabels = {
+  pending: 'Pending',
+  verified: 'Verified',
+  rejected: 'Not verified',
+  failed: 'Verification failed',
+} as const;
+
 function GoalCard({ goal }: { goal: JourneyGoal }) {
   const [expanded, setExpanded] = useState(false);
   const ongoing = ['ONGOING', 'ACTIVE'].includes(goal.status?.toUpperCase());
@@ -37,6 +44,7 @@ function Field({ label, value }: { label: string; value?: string | null }) {
 
 function ExperienceCard({ experience: exp, journey }: { experience: JourneyExperience; journey: UserJourneyResponse }) {
   const [expanded, setExpanded] = useState(false);
+  const verificationStatus = exp.verificationStatus ?? (exp.isVerified ? 'verified' : undefined);
   const transition = journey.transitions.find(t => t.toExperienceId === exp.id);
   const previous = transition ? journey.experiences.find(e => e.id === transition.fromExperienceId) : null;
   const linkedGoals = (exp.goalIds || []).map(id => journey.goals.find(g => g.id === id)?.title).filter((title): title is string => !!title);
@@ -52,7 +60,13 @@ function ExperienceCard({ experience: exp, journey }: { experience: JourneyExper
         <Text style={styles.experienceTitle}>{exp.title}</Text>
         <View style={[d.between, { flexWrap: 'wrap' }]}>
           <Text style={[d.small, { flexShrink: 1 }]}>{exp.organization || 'TechNova Global'}</Text>
-          {exp.isVerified && <DesktopBadge label="Verified" icon="check-circle" />}
+          {verificationStatus && (
+            <DesktopBadge
+              label={verificationLabels[verificationStatus]}
+              icon={verificationStatus === 'verified' ? 'check-circle' : verificationStatus === 'pending' ? 'clock' : 'alert-circle'}
+              warm={verificationStatus !== 'verified'}
+            />
+          )}
         </View>
         {!expanded && !!exp.timelineSummary && <Text numberOfLines={2} style={[d.small, { marginTop: 10 }]}>{exp.timelineSummary}</Text>}
       </TouchableOpacity>
@@ -80,11 +94,14 @@ function ExperienceCard({ experience: exp, journey }: { experience: JourneyExper
   </View>;
 }
 
-export function DesktopJourney({ journey, imageUrl, onViewGraph }: { journey: UserJourneyResponse; imageUrl?: string; onViewGraph: () => void }) {
+export function DesktopJourney({ journey, imageUrl, onViewGraph, onRefresh }: { journey: UserJourneyResponse; imageUrl?: string; onViewGraph: () => void; onRefresh: () => void }) {
   const { width } = useWindowDimensions();
   return <DesktopPage>
     <DesktopHeading title="Journey" subtitle="Your goals, experiences, and the decisions that connected them."
-      action={<DesktopButton label="View graph" icon="git-branch" onPress={onViewGraph} />} />
+      action={<View style={d.row}>
+        <DesktopButton label="Refresh" icon="refresh-cw" onPress={onRefresh} />
+        <DesktopButton label="View graph" icon="git-branch" onPress={onViewGraph} />
+      </View>} />
     <View style={[d.between, styles.identity]}>
       <View style={d.row}>
         <DesktopAvatar imageUrl={imageUrl} />

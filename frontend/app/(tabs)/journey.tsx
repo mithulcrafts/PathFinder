@@ -198,6 +198,7 @@ export default function JourneyPage() {
           journey={journey}
           imageUrl={clerkUser?.hasImage ? clerkUser.imageUrl : undefined}
           onViewGraph={() => setShowGraph(true)}
+          onRefresh={loadJourney}
         />
       ) : <>
       {/* Header */}

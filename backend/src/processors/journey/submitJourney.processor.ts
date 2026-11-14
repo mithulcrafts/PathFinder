@@ -15,14 +15,17 @@ import { updateUserSummary } from "../../services/user.service.js";
 import { validateExperienceDuplicate } from "./staticAnalysis/experienceDuplicate.validator.js";
 import { deleteJourneySession } from "../../services/journeySession.service.js";
 import { addExperienceReputation } from "../../services/reputation.service.js";
-import { verifyProof } from "./verifyProof.processor.js";
+import { MAX_PROOF_FILE_SIZE, uploadProofToCloudinary, verifyProof } from "./verifyProof.processor.js";
 import { z } from "zod";
 
 function normalizeJourneyExperience(
     experience: z.infer<typeof journeyExperienceSchema>
 ): JourneyExperience {
+    const { verificationStatus, verificationMocked, ...fields } = experience;
     return {
-        ...experience,
+        ...fields,
+        ...(verificationStatus !== undefined && { verificationStatus }),
+        ...(verificationMocked !== undefined && { verificationMocked }),
         endDate: experience.endDate ?? null,
         challengeFaced: experience.challengeFaced ?? null,
         outcome: experience.outcome ?? null,
@@ -66,6 +69,7 @@ async function inferTransition(
         systemPrompt: TRANSITION_INFERENCE_SYSTEM_PROMPT,
         userPrompt: buildTransitionInferencePrompt(current, top5),
         schema: transitionInferenceSchema,
+        timeoutMs: 10_000,
     });
 }
 export async function submitJourney(
@@ -81,29 +85,61 @@ export async function submitJourney(
         );
     }
     const validJourney = validation.data;
-    const submittedExperiences = validJourney.experiences;
-    const verifiedExperiences: JourneyExperience[] = [];
-
+    const { experiences: submittedExperiences, mockVerification } = validJourney;
+    const fileProofs = submittedExperiences.flatMap(({ proofs }) =>
+        proofs.filter(({ sourceType, url }) => !url && (sourceType === "image" || sourceType === "pdf"))
+    );
+    if (proofFile && fileProofs.length !== 1) {
+        throw new Error("Attach one photo or document per submission and select it as proof.");
+    }
+    if (proofFile && proofFile.size > MAX_PROOF_FILE_SIZE) {
+        throw new Error("Attachments must be 10 MB or smaller.");
+    }
     for (const experience of submittedExperiences) {
-        const verifiedProofs = await Promise.all(
-            experience.proofs.map((proof) =>
-                verifyProof(
-                    experience,
-                    proof,
-                    proofFile
-                )
-            )
-        );
+        const isDuplicate = await validateExperienceDuplicate(userId, {
+            title: experience.title,
+            organization: experience.organization ?? undefined,
+            description: experience.context,
+            achievements: experience.achievements ?? undefined,
+            outcome: experience.outcome ?? undefined,
+        });
+
+        if (isDuplicate) {
+            throw new Error(
+                `Submission rejected: An experience matching "${experience.title}" already exists in your journey footprint.`
+            );
+        }
+    }
+
+    const uploadedProofUrl = mockVerification && proofFile ? await uploadProofToCloudinary(proofFile) : null;
+    const experiencesToSave = await Promise.all(submittedExperiences.map(async experience => {
+        const proofs = mockVerification
+            ? experience.proofs.map((proof) => ({
+                ...proof,
+                url: proof.url ?? (proof === fileProofs[0] ? uploadedProofUrl : null),
+                status: "skipped",
+                verifiedAt: null,
+                reason: null,
+            }))
+            : await Promise.all(experience.proofs.map(proof =>
+                verifyProof(experience, proof, proof === fileProofs[0] ? proofFile : null)
+            ));
+        const isVerified = !mockVerification && proofs.some(proof => proof.status === "verified");
+        const verificationStatus = mockVerification || isVerified
+            ? "verified"
+            : proofs.some(proof => proof.status === "failed") ? "failed" : "rejected";
 
         const { decisionReason,
             ...experienceWithoutDecisionReason } = experience;
 
         const parsed = journeyExperienceSchema.safeParse({
             ...experienceWithoutDecisionReason,
-            proofs: verifiedProofs,
-            isVerified: verifiedProofs.some(
-                (proof) => proof.status === "verified"
-            ),
+            proofs,
+            isVerified,
+            ...(mockVerification !== undefined && {
+                verificationStatus,
+                verificationMocked: mockVerification,
+            }),
 
             endDate: experience.endDate ?? null,
             challengeFaced: experience.challengeFaced ?? null,
@@ -121,24 +157,8 @@ export async function submitJourney(
 
         const normalized: JourneyExperience = normalizeJourneyExperience(parsed.data);
 
-        verifiedExperiences.push(normalized);
-    }
-
-    for (const exp of verifiedExperiences) {
-        const isDuplicate = await validateExperienceDuplicate(userId, {
-            title: exp.title,
-            organization: exp.organization ?? undefined,
-            description: exp.context,
-            achievements: exp.achievements ?? undefined,
-            outcome: exp.outcome ?? undefined,
-        });
-
-        if (isDuplicate) {
-            throw new Error(
-                `Submission rejected: An experience matching "${exp.title}" already exists in your journey footprint.`
-            );
-        }
-    }
+        return normalized;
+    }));
 
     const transitions = submittedExperiences.flatMap((experience) => {
         const decisionReason = experience.decisionReason?.trim();
@@ -151,8 +171,8 @@ export async function submitJourney(
         }];
     });
     const username = await getUsernameByUserId(userId);
-    await createExperiences(username, verifiedExperiences);
-    for (const experience of verifiedExperiences) {
+    await createExperiences(username, experiencesToSave);
+    for (const experience of experiencesToSave) {
         await generateExperienceEmbedding({
             id: experience.id,
             title: experience.title,
@@ -165,17 +185,20 @@ export async function submitJourney(
                 experience.achievements ?? null,
             skills:
                 experience.skills.map((s) => s.name),
-        });
+        }).catch(error => console.warn("Could not generate experience embedding", experience.id, error));
     }
     const inferredTransitions: TransitionInference[] = [];
-    for (const transition of transitions) {
+    const inferred = await Promise.allSettled(transitions.map(async transition => {
         const candidates = await inferTransitionCandidates(transition.toExperienceId, transition.decisionLabel);
-        const inferred = await inferTransition(candidates.current, candidates.top5);
-        inferredTransitions.push(inferred);
+        return inferTransition(candidates.current, candidates.top5);
+    }));
+    for (const result of inferred) {
+        if (result.status === "fulfilled") inferredTransitions.push(result.value);
+        else console.warn("Could not infer journey transition", result.reason);
     }
     const validatedTransitions = inferredTransitions
     .map((transition): JourneyTransition | null => {
-        const currentExperience = verifiedExperiences.find(
+        const currentExperience = experiencesToSave.find(
             (experience) => experience.title === transition.currentTitle
         );
         if (!currentExperience) {
@@ -184,7 +207,7 @@ export async function submitJourney(
             );
             return null;
         }
-        const previousExperience = verifiedExperiences.find(
+        const previousExperience = experiencesToSave.find(
             (experience) => experience.title === transition.fromTitle
         );
         if (!previousExperience) {
@@ -218,13 +241,25 @@ export async function submitJourney(
     .filter(
         (t): t is JourneyTransition => t !== null
     );
-    await createTransitions(validatedTransitions);
-    const verifiedCount = verifiedExperiences.filter((experience) => experience.isVerified).length;
-    await addExperienceReputation(userId, verifiedExperiences.length, verifiedCount);
-    const { summary, expertiseAreas } = await generateUserSummary(userId);
-    await updateUserSummary(userId, summary, expertiseAreas);
-    const goalIds = [...new Set(verifiedExperiences.flatMap((experience) => experience.goalIds))];
-    const goals = await getGoalsByIds(goalIds);
+    const savedTransitions = await createTransitions(validatedTransitions)
+        .then(() => validatedTransitions)
+        .catch(error => {
+            console.warn("Could not save inferred journey transitions", error);
+            return [];
+        });
+    const verifiedCount = experiencesToSave.filter((experience) => experience.isVerified).length;
+    const goalIds = [...new Set(experiencesToSave.flatMap((experience) => experience.goalIds))];
+    const [, , goals] = await Promise.all([
+        addExperienceReputation(userId, experiencesToSave.length, verifiedCount)
+            .catch(error => console.warn("Could not update experience reputation", error)),
+        generateUserSummary(userId, 10_000)
+            .then(({ summary, expertiseAreas }) => updateUserSummary(userId, summary, expertiseAreas))
+            .catch(error => console.warn("Could not update journey summary", error)),
+        getGoalsByIds(goalIds).catch(error => {
+            console.warn("Could not load saved journey goals", error);
+            return [];
+        }),
+    ]);
     try {
         await deleteJourneySession(conversationId);
     } catch (redisError) {
@@ -232,10 +267,10 @@ export async function submitJourney(
     }
     return {
         goals,
-        experiences: verifiedExperiences.map(
+        experiences: experiencesToSave.map(
             ({ proofs, ...experience }) => experience
         ),
-        transitions: validatedTransitions,
+        transitions: savedTransitions,
     };
 
 }

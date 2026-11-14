@@ -51,7 +51,7 @@
   align-items: center;
   gap: 34px;
   color: #e3e5eb;
-  font-size: 14px;
+  font-size: 16px;
 }
 .pf-landing .continuity .links a:hover {
   color: #ff9652;
@@ -101,6 +101,7 @@
   background: #ff6900;
   color: white;
   font-size: 15px;
+  letter-spacing: inherit;
   line-height: 24px;
   font-weight: 400;
 }
@@ -113,8 +114,8 @@
   height: 25px;
 }
 .pf-landing .continuity .legal {
-  font-size: 11px;
-  line-height: 17px;
+  font-size: 12px;
+  line-height: 18px;
   color: #acb3c0;
   margin-top: 12px;
 }
@@ -132,7 +133,6 @@
   font-size: clamp(23px, 1.81vw, 30px);
   font-weight: 400;
   line-height: 1.19;
-  letter-spacing: -0.02em;
 }
 .pf-landing .continuity .journey ol {
   list-style: none;
@@ -189,14 +189,13 @@
 }
 .pf-landing .continuity .stage {
   font-family: ArchivoNarrow_400Regular, Arial, sans-serif;
-  font-size: 14px;
+  font-size: 15px;
   line-height: 19px;
   font-weight: 400;
-  letter-spacing: -0.018em;
 }
 .pf-landing .continuity .quote {
-  font-size: 13px;
-  line-height: 18px;
+  font-size: 15px;
+  line-height: 21px;
   color: #56616a;
   margin-top: 2px;
 }
@@ -228,7 +227,6 @@
     400 16px/1.65 ArchivoNarrow_400Regular,
     Arial,
     sans-serif;
-  letter-spacing: normal;
   text-align: left;
   color-scheme: light;
 }
@@ -300,7 +298,7 @@
 }
 .pf-story .st-label {
   font:
-    400 11px/1.4 ArchivoNarrow_700Bold,
+    400 13px/1.4 ArchivoNarrow_700Bold,
     Arial,
     sans-serif;
   letter-spacing: 0.14em;
@@ -313,20 +311,18 @@
     400 clamp(30px, 3vw, 46px)/1.15 ArchivoNarrow_700Bold,
     Arial,
     sans-serif;
-  letter-spacing: -0.03em;
   max-width: 24ch;
   text-wrap: balance;
 }
 .pf-story .st-copy {
   color: var(--st-muted);
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1.75;
   margin-top: 18px;
   max-width: 59ch;
 }
 .pf-story .st-comparison h3 {
   font-size: 19px;
-  letter-spacing: -0.02em;
   line-height: 1.3;
   margin: 0 0 20px;
 }
@@ -359,7 +355,7 @@
   line-height: 1.5;
 }
 .pf-story .st-platform small {
-  font-size: 10px;
+  font-size: 13px;
   color: var(--st-muted);
 }
 .pf-story .st-merge {
@@ -396,7 +392,7 @@
 .pf-story .st-unified {
   padding: 18px 20px 17px;
   background: var(--st-orange);
-  color: var(--st-navy);
+  color: #fff;
   border-radius: 11px;
 }
 .pf-story .st-unified h4 {
@@ -406,7 +402,6 @@
   font-weight: 400;
   font-size: 20px;
   line-height: 1.2;
-  letter-spacing: -0.02em;
 }
 .pf-story .st-unified h4 svg {
   width: 20px;
@@ -424,7 +419,7 @@
   border: 1px solid #8e3d0080;
   padding: 3px 9px;
   border-radius: 20px;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 400;
   line-height: 1.4;
 }
@@ -444,7 +439,7 @@
   gap: 12px;
   padding: 13px 0;
   border-bottom: 1px solid var(--st-border);
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1.6;
 }
 .pf-story .st-question-list li:before {
@@ -497,13 +492,13 @@
   height: 19px;
 }
 .pf-story .st-step-list b {
-  font-size: 14px;
+  font-size: 15px;
   display: block;
   line-height: 1.5;
 }
 .pf-story .st-step-list p {
   color: #456154;
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.5;
   max-width: 19ch;
   margin: 4px 0 0;
@@ -528,7 +523,7 @@
   max-width: 19ch;
 }
 .pf-story .st-trust-community .st-copy {
-  font-size: 14px;
+  font-size: 16px;
   max-width: 51ch;
 }
 .pf-story .st-trust-note {
@@ -546,13 +541,13 @@
 }
 .pf-story .st-trust-note p {
   color: var(--st-muted);
-  font-size: 12px;
+  font-size: 14px;
   max-width: 42ch;
 }
 .pf-story .st-trust-note b {
   display: block;
   color: #355848;
-  font-size: 12px;
+  font-size: 14px;
   margin-bottom: 3px;
 }
 .pf-story .st-network {
@@ -569,7 +564,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 400;
   color: #49524d;
 }
@@ -594,7 +589,7 @@
 }
 .pf-story .st-langs li {
   font:
-    400 14px/1.4 ArchivoNarrow_400Regular,
+    400 15px/1.4 ArchivoNarrow_400Regular,
     'Nirmala UI',
     Arial,
     sans-serif;
@@ -628,10 +623,10 @@
   height: 17px;
 }
 .pf-story .st-a11y-feature b {
-  font-size: 15px;
+  font-size: 16px;
 }
 .pf-story .st-a11y-feature p {
-  font-size: 13px;
+  font-size: 15px;
   color: var(--st-muted);
   line-height: 1.55;
   margin-top: 3px;
@@ -665,7 +660,6 @@
     400 clamp(32px, 3.4vw, 52px)/1.15 ArchivoNarrow_700Bold,
     Arial,
     sans-serif;
-  letter-spacing: -0.03em;
   color: #f9f6ef;
   max-width: 36ch;
 }
@@ -720,7 +714,7 @@
 }
 .pf-story .st-tech {
   flex-basis: 100%;
-  font-size: 10px;
+  font-size: 12px;
   color: #a0a5af;
 }
 .pf-story .st-contact {
@@ -767,6 +761,7 @@
   min-height: 0;
   overflow-y: auto;
   font-family: ArchivoNarrow_400Regular, Arial, sans-serif;
+  letter-spacing: 0.015em;
   color: #152238;
   background: #faf9f6;
 }

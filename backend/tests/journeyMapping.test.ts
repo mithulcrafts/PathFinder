@@ -5,6 +5,7 @@ import {
   attachExperienceGoals,
   mapJourneyExperience,
   mapJourneyGoal,
+  mapOwnerJourneyExperience,
   mapJourneyTransition,
 } from "../src/services/journeyMapping.js";
 
@@ -79,6 +80,23 @@ test("experience mapping retains existing optional values without replacing empt
   for (const [key, value] of Object.entries(optional)) {
     assert.deepEqual(result[key as keyof typeof result], key === "endDate" ? "2026-08-01" : value);
   }
+});
+
+test("owner mapping retains persisted verification status without exposing mock verification publicly", () => {
+  const mocked = record({
+    e: { properties: { ...experience, isVerified: false, verificationStatus: "verified", verificationMocked: true } },
+    skills: [],
+  });
+  const pending = record({
+    e: { properties: { ...experience, isVerified: false, verificationStatus: "pending", verificationMocked: false } },
+    skills: [],
+  });
+  assert.equal(mapOwnerJourneyExperience(mocked).verificationStatus, "verified");
+  assert.equal(mapOwnerJourneyExperience(mocked).verificationMocked, true);
+  assert.equal(mapJourneyExperience(mocked).isVerified, false);
+  assert.equal("verificationStatus" in mapJourneyExperience(mocked), false);
+  assert.equal("verificationMocked" in mapJourneyExperience(mocked), false);
+  assert.equal(mapOwnerJourneyExperience(pending).verificationStatus, "pending");
 });
 
 test("goal relationships attach to their experience while unlinked experiences remain empty", () => {

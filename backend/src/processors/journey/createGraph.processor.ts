@@ -50,6 +50,8 @@ function experienceParams(experience: JourneyExperience, order: number) {
     applicationStatus: nullIfUndefined(experience.applicationStatus),
     achievements: experience.achievements ?? null,
     isVerified: experience.isVerified ?? false,
+    verificationStatus: experience.verificationStatus ?? null,
+    verificationMocked: experience.verificationMocked ?? null,
     order,
   };
 }
@@ -127,7 +129,7 @@ export async function upsertExperience(
   await tx.run(
     `
     MATCH (u:User {username: $username})
-    MERGE (e:Experience {id: $id})
+    MERGE (u)-[r:HAS_EXPERIENCE]->(e:Experience {id: $id})
     SET
       e.title = $title,
       e.timelineSummary = $timelineSummary,
@@ -142,9 +144,10 @@ export async function upsertExperience(
       e.organization = $organization,
       e.applicationStatus = $applicationStatus,
       e.achievements = $achievements,
-      e.isVerified = $isVerified
-    MERGE (u)-[r:HAS_EXPERIENCE]->(e)
-    SET r.order = $order
+      e.isVerified = $isVerified,
+      e.verificationStatus = $verificationStatus,
+      e.verificationMocked = $verificationMocked,
+      r.order = $order
     `,
     {
       username,

@@ -1,67 +1,47 @@
+import type { GeminiExperience } from "../../types/journey/GeminiJourneyDraft.types.js";
+import type { JourneyMessage } from "../../types/journey/JourneySession.types.js";
+
 export const JOURNEY_DRAFT_SYSTEM_PROMPT = `
-You are the Journey Draft Builder for PathFinder AI.
-Your sole directive is to accurately extract structural milestones from a user's natural language story into a structured Journey Draft.
+Build and revise a PathFinder journey draft using facts the user provides. The input contains the current draft, recent user messages, and the latest message. The latest message takes precedence for corrections.
 
---- CRITICAL OPERATIONAL LAWS ---
-1. STRICT MATCHING: If a detail is mentioned in the input, you MUST extract it. Do not skip an optional field (like 'organization', 'outcome', 'achievements', or 'decisionReason') if the narrative contains clues or explicit statements satisfying it.
-2. DECISION REASON CAPTURE: Pay extreme attention to WHY, WHEN, or HOW a user transitioned from one experience to the next. Triggers, motivations, pivots, lay-offs, graduations, sudden realizations, or discovering opportunities must be aggressively captured as the "decisionReason" for the NEXT experience it caused.
-3. NO FABRICATION: Do not invent details. If an optional field is completely absent from the narrative, omit it.
-4. SINGLE EXPERIENCE ARCHITECTURE: Do not split a single continuous job/project into multiple sub-blocks unless the user explicitly defines it as completely separate roles.
+- Add a new item only for a distinct experience the user actually describes. Include its title, context, and a one-sentence timelineSummary. Keep a continuous role or project in one experience.
+- To revise an existing item, return its experienceNumber from the current draft and only fields affected by the latest message. Keep unrelated fields and experiences out of the response. Use null to explicitly clear an optional field. Use removeExperienceNumbers only when the user asks to remove an entire experience. If a target is ambiguous, leave it unchanged.
+- An item titled "Untitled experience" is a starter draft. If the user repeats or adds to its description, fill its missing fields from the story and keep its experienceNumber.
+- Use recent messages to resolve references or recover earlier details when the latest message supplies enough context to create a draft. For a question, greeting, or message with no new facts, return an empty experiences array.
+- Use MM YYYY for startDate and endDate when the month and year are known. Leave missing dates blank. An ongoing role has no endDate. A milestone reached during a role does not establish an end date.
+- Keep title concise, context faithful to the user's account, and timelineSummary focused on what happened. Update related text if a correction makes it inaccurate.
+- Fill organization only for a named organization. Distinguish challengeFaced (the obstacle), outcome (the result), and achievements (measurable or recognized accomplishments).
+- Use applicationStatus only for an explicit application. Return stated skills as objects with name and type (Technical, Soft, Domain, or ExtraCurricular).
+- Put decisionReason on the experience the decision led to. Capture the user's stated motivation.
+- Omit facts the user did not supply. Do not generate goals, proof records, verification information, or IDs.
 
---- FIELD DEFINITIONS & RULES ---
-- title: Concise, punchy title (5-8 words). (e.g., "Full-Stack Engineer at FinTech Startup")
-- context: Exact narrative facts. Preserve user wording. Do not enrich, expand, or add fluff.
-- timelineSummary: One-sentence timeline description focusing purely on ACTION/WHAT HAPPENED, not what was learned.
-- startDate: Format: "MM YYYY" (e.g., "01 2024").
-- endDate: Format: "MM YYYY". Omit if ongoing/unmentioned.
-- organization: Populate ONLY when a specific, identifiable name is stated (e.g., "Google", "MIT", "HackerEarth"). NEVER use generic terms like "College", "Company", "Startup", "Client". Omit if name isn't given.
-- challengeFaced: The clear friction point, obstacle, or difficulty mentioned.
-- outcome: A concrete, tangible end result (e.g., "Received PPO", "Won 1st Place", "Product Shipped", "Application Rejected"). Do NOT list skills/technologies here. Omit if no structural result occurred.
-- applicationStatus: Must strictly be one of: ["accepted", "rejected", "waitlisted", "pending"]. Only use if an application context exists.
-- achievements: Measurable or externally recognized accomplishments (e.g., "Raised $50k funding", "Published paper in IEEE", "Secured 1st rank"). Do NOT list ordinary tasks, daily jobs, or learning tools.
-- skills: Skills or tools explicitly stated. Never infer.
-- decisionReason: The causal link or motivation for stepping into THIS specific experience. Capture the internal or external trigger. 
-  * Look for connecting phrases: "Because of that...", "So I decided to...", "After graduating...", "I got laid off so I...", "I wanted to learn X so I started...". 
-  * Apply this to the arriving experience, not the departing one.
-
---- PROHIBITED FIELDS ---
-Do NOT create goals, goalIds, proofs, verification info, or id fields.
-
---- FEW-SHOT PARSING EXAMPLES ---
-
-Input Narrative: 
-"I was working at Stripe as a junior dev starting in June 2023. The project scaled like crazy but handling database locks under peak loads was a total nightmare. Eventually, we shipped the v2 engine successfully. However, in August 2024 I got passed over for a promotion, so I quit to start building my own micro-SaaS app called FormFlow. It was tough finding users initially, but we ended up hitting $2k MRR by December 2024."
-
-Expected Output Extraction Structure:
-[
-  {
-    "title": "Junior Developer at Stripe",
-    "context": "Worked as a junior developer at Stripe starting in June 2023. Handled a project that scaled rapidly.",
-    "timelineSummary": "Built core features and managed scaling requirements as a junior developer.",
-    "startDate": "06 2023",
-    "endDate": "08 2024",
-    "organization": "Stripe",
-    "challengeFaced": "Handling complex database locks under peak transaction loads.",
-    "outcome": "Successfully shipped the v2 engine.",
-    "skills": ["Database Management", "Scaling Systems"]
-  },
-  {
-    "title": "Founder of FormFlow Micro-SaaS",
-    "context": "Quit previous role to build an independent micro-SaaS application called FormFlow. Managed to grow it to a steady income.",
-    "timelineSummary": "Founded and scaled FormFlow micro-SaaS from scratch to thousands in recurring revenue.",
-    "startDate": "08 2024",
-    "endDate": "12 2024",
-    "organization": "FormFlow",
-    "challengeFaced": "Finding initial active users to gain early traction.",
-    "outcome": "Hit $2k Monthly Recurring Revenue (MRR).",
-    "achievements": ["Built and launched a product", "Hit $2k MRR independently"],
-    "decisionReason": "Quit and shifted to build this micro-SaaS because I was passed over for a promotion at Stripe."
-  }
-]
+Example: if experience 1 is the only internship and the user says "My internship started in July 2024, and we reduced processing time by 30%", return
+{"experiences":[{"experienceNumber":1,"startDate":"07 2024","outcome":"Reduced processing time by 30%","achievements":["Reduced processing time by 30%"]}]}.
 `;
 
 export function buildJourneyDraftPrompt(
-  narrative: string
+  narrative: string,
+  previous: GeminiExperience[],
+  history: JourneyMessage[],
 ): string {
-  return narrative.trim();
+  const currentDraft = previous.map((experience, index) => ({
+    experienceNumber: index + 1,
+    title: experience.title,
+    context: experience.context,
+    timelineSummary: experience.timelineSummary,
+    startDate: experience.startDate,
+    endDate: experience.endDate,
+    organization: experience.organization,
+    challengeFaced: experience.challengeFaced,
+    outcome: experience.outcome,
+    applicationStatus: experience.applicationStatus,
+    achievements: experience.achievements,
+    skills: experience.skills,
+    decisionReason: experience.decisionReason,
+  }));
+  return JSON.stringify({
+    currentDraft,
+    recentMessages: history.filter(({ role }) => role === "user").slice(-8).map(({ content }) => content),
+    latestMessage: narrative,
+  });
 }

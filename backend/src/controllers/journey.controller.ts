@@ -34,15 +34,24 @@ export async function continueJourneyController(
 ): Promise<void> {
   try {
     const { conversationId, message } = req.body;
+    const userId = req.userId;
+    if (!userId) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
     if (!conversationId || typeof conversationId !== "string") {
       res.status(400).json({ error: "conversationId is required" });
       return;
     }
-    if (!message || typeof message !== "string") {
+    if (typeof message !== "string" || !message.trim()) {
       res.status(400).json({ error: "message is required" });
       return;
     }
-    const response = await continueJourney(conversationId, message);
+    const response = await continueJourney(userId, conversationId, message.trim());
+    if (!response) {
+      res.status(404).json({ error: "Journey session not found" });
+      return;
+    }
 
     res.json({
       success: true,
@@ -106,11 +115,15 @@ export async function submitJourneyController(
       });
       return;
     }
+    if (journeyPayload.mockVerification !== undefined && typeof journeyPayload.mockVerification !== "boolean") {
+      res.status(400).json({ error: "mockVerification must be a boolean" });
+      return;
+    }
     const proofFile = req.file ?? null;
     const result = await submitJourney(
       userId,
       conversationId,
-      { experiences: journeyPayload.experiences },
+      { experiences: journeyPayload.experiences, mockVerification: journeyPayload.mockVerification },
       proofFile
     );
     res.json({

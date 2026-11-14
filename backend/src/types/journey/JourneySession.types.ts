@@ -1,3 +1,5 @@
+import type { PartialJourneyDraft } from "./PartialJourney.types.js";
+
 export interface JourneyMessage {
   role: "assistant" | "user";
   content: string;
@@ -19,7 +21,7 @@ export interface JourneySession {
   userId: string;
   state: JourneyState;
   conversationHistory: JourneyMessage[];
-  journeyDraft: unknown | null;
+  journeyDraft: PartialJourneyDraft | null;
   currentExperienceIndex: number;
   createdAt: number;
   updatedAt: number;

@@ -19,11 +19,13 @@ export class GeminiProvider {
     userPrompt,
     schema,
     temperature,
+    timeoutMs,
   }: {
     systemPrompt: string;
     userPrompt: string;
     schema: Schema;
     temperature?: number;
+    timeoutMs?: number;
   }): Promise<T> {
     const model =
       geminiClient.getGenerativeModel({
@@ -38,9 +40,7 @@ export class GeminiProvider {
       });
 
   const result =
-    await model.generateContent(
-      userPrompt
-    );
+      await model.generateContent(userPrompt, timeoutMs === undefined ? undefined : { timeout: timeoutMs });
 
   const text =
     result.response.text();

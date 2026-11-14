@@ -1,7 +1,7 @@
 import type { JourneyExperience, JourneyTransition } from "../processors/journey/journeySchema.js";
 import type { JourneyGoal } from "../types/journey/Journey.types.js";
 import { closeSession, getSession } from "./neo4j.service.js";
-import { attachExperienceGoals, mapJourneyExperience, mapJourneyGoal, mapJourneyTransition } from "./journeyMapping.js";
+import { attachExperienceGoals, mapOwnerJourneyExperience, mapJourneyGoal, mapJourneyTransition } from "./journeyMapping.js";
 
 export interface UpdateProfileInput {
   clerkId: string;
@@ -144,7 +144,7 @@ export async function getUserJourney(
       { clerkId }
     );
 
-    const experiences = experiencesResult.records.map(mapJourneyExperience);
+    const experiences = experiencesResult.records.map(mapOwnerJourneyExperience);
     const goalRelationshipResult = await session.run(
       `
       MATCH (u:User {clerkId: $clerkId})-[:HAS_EXPERIENCE]->(e:Experience)-[:CONTRIBUTED_TO]->(g:Goal)

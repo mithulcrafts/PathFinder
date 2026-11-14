@@ -16,5 +16,8 @@ export interface GeminiExperience {
 }
 
 export interface GeminiJourneyDraft {
-  experiences: GeminiExperience[];
+  experiences: (Partial<{ [K in keyof GeminiExperience]: GeminiExperience[K] | null }> & {
+    experienceNumber?: number;
+  })[];
+  removeExperienceNumbers?: number[];
 }

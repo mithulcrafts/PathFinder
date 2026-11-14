@@ -1,6 +1,7 @@
 import { geminiClient } from "../../config/gemini.config.js";
 import type { JourneyProof } from "../../types/journey/Journey.types.js";
 import { PROOF_VERIFICATION_SYSTEM_PROMPT, buildProofVerificationPrompt } from "../../prompts/onboarding/proofVerification.prompt.js";
+import { z } from "zod";
 import { journeyProofSchema } from "./journeySchema.js";
 import { SchemaType, type Schema } from "@google/generative-ai";
 import { cloudinary } from "../../config/cloudinary.config.js";
@@ -8,9 +9,9 @@ import { PDFParse } from "pdf-parse";
 import type { SubmitExperience, SubmitProof } from "./journeySchema.js";
 
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB limit
+export const MAX_PROOF_FILE_SIZE = 10 * 1024 * 1024; // 10MB limit
 
-function uploadProofToCloudinary(
+export function uploadProofToCloudinary(
   file: Express.Multer.File
 ): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -18,10 +19,11 @@ function uploadProofToCloudinary(
       {
         folder: "pathfinder/proofs",
         resource_type: "auto",
+        timeout: 10_000,
       },
       (error, result) => {
         if (error || !result) {
-          reject(error);
+          reject(error ?? new Error("Cloudinary returned no upload result"));
           return;
         }
 
@@ -33,11 +35,18 @@ function uploadProofToCloudinary(
   });
 }
 
+const proofVerdictSchema = z.object({
+  status: z.enum(["verified", "rejected"]),
+  reason: z.string().trim().min(1),
+});
+
 const temporaryLlmResponseSchema: Schema = {
   type: SchemaType.OBJECT,
   properties: {
     status: {
       type: SchemaType.STRING,
+      format: "enum",
+      enum: ["verified", "rejected"],
       description: "Whether the proof supports the claimed experience: must be 'verified' or 'rejected'",
     },
     reason: {
@@ -61,8 +70,9 @@ interface GitHubParseResult {
 function parseGitHubUrl(url: string): GitHubParseResult | null {
   try {
     const parsed = new URL(url);
-    if (parsed.hostname !== "github.com" && parsed.hostname !== "www.github.com") return null;
+    if (parsed.protocol !== "https:" || !["github.com", "www.github.com"].includes(parsed.hostname)) return null;
     const parts = parsed.pathname.split("/").filter(Boolean);
+    if (parts.some(part => !/^[\w.-]+$/.test(part))) return null;
     if (parts.length === 0) return null;
 
     const owner = parts[0];
@@ -82,21 +92,20 @@ function parseGitHubUrl(url: string): GitHubParseResult | null {
     }
 
     // Pull Request: github.com/owner/repo/pull/num
-    if (parts.length >= 4 && parts[2] === "pull") {
+    if (parts.length === 4 && parts[2] === "pull") {
       const id = parts[3];
-      if (!id) return null;
+      if (!id || !/^\d+$/.test(id)) return null;
       return { type: "pull", owner, repo, id };
     }
 
     // Commit: github.com/owner/repo/commit/sha
-    if (parts.length >= 4 && parts[2] === "commit") {
+    if (parts.length === 4 && parts[2] === "commit") {
       const id = parts[3];
-      if (!id) return null;
+      if (!id || !/^[a-f0-9]+$/i.test(id)) return null;
       return { type: "commit", owner, repo, id };
     }
 
-    // Fallback to repository
-    return { type: "repository", owner, repo };
+    return null;
   } catch {
     return null;
   }
@@ -109,6 +118,7 @@ async function fetchReadme(owner: string, repo: string): Promise<string> {
   try {
     const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/readme`, {
       headers: { "User-Agent": "PathFinder-Proof-Verification" },
+      signal: AbortSignal.timeout(4_000),
     });
     if (!res.ok) return "No README available or failed to fetch";
     const data = (await res.json()) as any;
@@ -123,39 +133,6 @@ async function fetchReadme(owner: string, repo: string): Promise<string> {
 }
 
 /**
- * Resolves local file paths or remote URLs with file safety validation.
- */
-export async function fetchProofFile(
-  url: string
-): Promise<{ buffer: Buffer; mimeType: string }> {
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error(
-      `Failed to fetch ${url}`
-    );
-  }
-  const arrayBuffer = await res.arrayBuffer();
-  if (arrayBuffer.byteLength > MAX_FILE_SIZE) {
-    throw new Error("File exceeds 10MB.");
-  }
-  return {
-    buffer: Buffer.from(arrayBuffer),
-    mimeType:
-      res.headers.get("content-type") ??
-      getMimeTypeFromUrl(url),
-  };
-}
-
-function getMimeTypeFromUrl(urlOrPath: string): string {
-  const ext = urlOrPath.split(".").pop()?.toLowerCase();
-  if (ext === "pdf") return "application/pdf";
-  if (ext === "png") return "image/png";
-  if (ext === "jpg" || ext === "jpeg") return "image/jpeg";
-  if (ext === "webp") return "image/webp";
-  return "application/octet-stream";
-}
-
-/**
  * Standalone Proof Verification Processor.
  * Verifies if the submitted proof supports the claimed experience.
  * This processor does not mutate database records.
@@ -165,61 +142,36 @@ export async function verifyProof(
   proof: SubmitProof,
   uploadedFile: Express.Multer.File | null
 ): Promise<JourneyProof> {
-  const sourceType = proof.sourceType;
-  const url = proof.url ?? "";
-  let cloudinaryUrl = proof.url ?? "";
+  const { sourceType } = proof;
+  const url = proof.url ?? null;
+  let storedUrl = url;
+  const unsuccessful = (status: "rejected" | "failed" | "skipped", reason: string): JourneyProof => ({
+    id: proof.id, sourceType, url: storedUrl, status, verifiedAt: null, reason,
+  });
   try {
     if (sourceType === "image" || sourceType === "pdf") {
-      if (!uploadedFile) {
-        return {
-          id: proof.id,
-          sourceType: proof.sourceType,
-          url: "",
-          status: "rejected",
-          verifiedAt: null,
-          reason: "Uploaded file is missing.",
-        };
-      }
-
-      try {
-        cloudinaryUrl = await uploadProofToCloudinary(
-          uploadedFile
-        );
-      } catch (uploadErr: any) {
-        return {
-          id: proof.id,
-          sourceType: proof.sourceType,
-          url: "",
-          status: "rejected",
-          verifiedAt: null,
-          reason:
-            "Failed to upload proof: " +
-            uploadErr.message,
-        };
-      }
+      if (!uploadedFile?.buffer.length) return unsuccessful("rejected", "The attached file is missing or empty.");
+      if (uploadedFile.size > MAX_PROOF_FILE_SIZE) return unsuccessful("rejected", "The attachment exceeds 10 MB.");
+      const supported = sourceType === "pdf"
+        ? uploadedFile.mimetype === "application/pdf"
+        : ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"].includes(uploadedFile.mimetype);
+      if (!supported) return unsuccessful("skipped", "Use a PDF or a supported image format for verification.");
+      storedUrl = await uploadProofToCloudinary(uploadedFile);
     }
 
     let verificationContext = "";
     let imagePart: any = null;
 
     if (sourceType === "github") {
-      const parsed = parseGitHubUrl(url);
-      if (!parsed) {
-        return {
-          id: proof.id,
-          sourceType: proof.sourceType,
-          url: cloudinaryUrl,
-          status: "rejected",
-          verifiedAt: null,
-          reason: `Invalid GitHub URL: ${url}`,
-        };
-      }
+      const parsed = url && parseGitHubUrl(url);
+      if (!parsed) return unsuccessful("rejected", "Use a GitHub profile, repository, pull request, or commit URL.");
 
-      const headers = { "User-Agent": "PathFinder-Proof-Verification" };
+      const request = { headers: { "User-Agent": "PathFinder-Proof-Verification" }, signal: AbortSignal.timeout(8_000) };
       let payload: any = { type: parsed.type };
 
       if (parsed.type === "repository") {
-        const res = await fetch(`https://api.github.com/repos/${parsed.owner}/${parsed.repo}`, { headers });
+        const res = await fetch(`https://api.github.com/repos/${parsed.owner}/${parsed.repo}`, request);
+        if (res.status === 404) return unsuccessful("rejected", "GitHub could not find public evidence at that URL.");
         if (!res.ok) throw new Error(`GitHub Repository API error (${res.status}): ${res.statusText}`);
         const data = (await res.json()) as any;
         payload.repository = {
@@ -235,7 +187,8 @@ export async function verifyProof(
         payload.readme = await fetchReadme(parsed.owner, parsed.repo!);
 
       } else if (parsed.type === "pull") {
-        const res = await fetch(`https://api.github.com/repos/${parsed.owner}/${parsed.repo}/pulls/${parsed.id}`, { headers });
+        const res = await fetch(`https://api.github.com/repos/${parsed.owner}/${parsed.repo}/pulls/${parsed.id}`, request);
+        if (res.status === 404) return unsuccessful("rejected", "GitHub could not find public evidence at that URL.");
         if (!res.ok) throw new Error(`GitHub Pull Request API error (${res.status}): ${res.statusText}`);
         const data = (await res.json()) as any;
         payload.pullRequest = {
@@ -251,7 +204,8 @@ export async function verifyProof(
         };
 
       } else if (parsed.type === "commit") {
-        const res = await fetch(`https://api.github.com/repos/${parsed.owner}/${parsed.repo}/commits/${parsed.id}`, { headers });
+        const res = await fetch(`https://api.github.com/repos/${parsed.owner}/${parsed.repo}/commits/${parsed.id}`, request);
+        if (res.status === 404) return unsuccessful("rejected", "GitHub could not find public evidence at that URL.");
         if (!res.ok) throw new Error(`GitHub Commit API error (${res.status}): ${res.statusText}`);
         const data = (await res.json()) as any;
         payload.commit = {
@@ -264,7 +218,8 @@ export async function verifyProof(
         };
 
       } else if (parsed.type === "user") {
-        const res = await fetch(`https://api.github.com/users/${parsed.owner}`, { headers });
+        const res = await fetch(`https://api.github.com/users/${parsed.owner}`, request);
+        if (res.status === 404) return unsuccessful("rejected", "GitHub could not find public evidence at that URL.");
         if (!res.ok) throw new Error(`GitHub User API error (${res.status}): ${res.statusText}`);
         const data = (await res.json()) as any;
         payload.userProfile = {
@@ -282,87 +237,24 @@ export async function verifyProof(
       verificationContext = JSON.stringify(payload, null, 2);
 
     } else if (sourceType === "pdf") {
-      let fileData;
+      const parser = new PDFParse({ data: uploadedFile!.buffer });
       try {
-        fileData = await fetchProofFile(cloudinaryUrl);
-      } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : String(err);
-        return {
-          id: proof.id,
-          sourceType: proof.sourceType,
-          url: cloudinaryUrl,
-          status: "rejected",
-          verifiedAt: null,
-          reason: `Failed to retrieve PDF file: ${message}`,
-        };
-      }
-
-      let extractedText = "";
-      let pdfMetadata: any = {};
-      try {
-        const parser = new PDFParse({ data: fileData.buffer });
         const parsedText = await parser.getText();
-        extractedText = parsedText.text;
-
-        try {
-          const parsedInfo = await parser.getInfo();
-          pdfMetadata = parsedInfo.info || {};
-        } catch {
-          // Info parsing is optional
-        }
-      } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : String(err);
-        return {
-          id: proof.id,
-          sourceType: proof.sourceType,
-          url: cloudinaryUrl,
-          status: "rejected",
-          verifiedAt: null,
-          reason: `Failed to parse PDF content: ${message}`,
-        };
+        if (!parsedText.text.trim()) return unsuccessful("skipped", "The PDF contains no extractable text.");
+        verificationContext = parsedText.text.slice(0, 30_000);
+      } finally {
+        await parser.destroy();
       }
-
-      verificationContext = JSON.stringify({
-        text: extractedText || "No text extracted from PDF.",
-        metadata: pdfMetadata,
-      }, null, 2);
-
     } else if (sourceType === "image") {
-      let fileData;
-      try {
-        fileData = await fetchProofFile(cloudinaryUrl);
-      } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : String(err);
-        return {
-          id: proof.id,
-          sourceType: proof.sourceType,
-          url: cloudinaryUrl,
-          status: "rejected",
-          verifiedAt: null,
-          reason: `Failed to retrieve image file: ${message}`,
-        };
-      }
-
       imagePart = {
         inlineData: {
-          data: fileData.buffer.toString("base64"),
-          mimeType: fileData.mimeType,
+          data: uploadedFile!.buffer.toString("base64"),
+          mimeType: uploadedFile!.mimetype,
         },
       };
-
-      verificationContext = JSON.stringify({
-        description: "Analyzing uploaded visual proof",
-        hasImageAttached: true,
-      }, null, 2);
+      verificationContext = "Analyze the attached image.";
     } else {
-      return {
-        id: proof.id,
-        sourceType: proof.sourceType,
-        url: cloudinaryUrl,
-        status: "rejected",
-        verifiedAt: null,
-        reason: `Unsupported proof source type: ${sourceType}`,
-      };
+      return unsuccessful("skipped", "Generic links are not supported for verification.");
     }
 
     const model = geminiClient.getGenerativeModel({
@@ -394,22 +286,22 @@ export async function verifyProof(
       contents.push(imagePart);
     }
 
-    const result = await model.generateContent(contents);
+    const result = await model.generateContent(contents, { timeout: 15_000 });
     const text = result.response.text();
     if (!text) {
       throw new Error("Gemini returned empty verification response");
     }
 
-    const verificationObj = JSON.parse(text) as { status: "verified" | "rejected"; reason: string };
+    const verificationObj = proofVerdictSchema.parse(JSON.parse(text));
 
     // Validate against the single source of truth Zod schema: journeyProofSchema
     const candidateResult = {
       id: proof.id,
       sourceType: proof.sourceType,
-      url: cloudinaryUrl,
-      status: verificationObj.status === "verified" ? "verified" : "rejected",
+      url: storedUrl,
+      status: verificationObj.status,
       verifiedAt: verificationObj.status === "verified" ? new Date().toISOString() : null,
-      reason: verificationObj.reason || "No reason provided",
+      reason: verificationObj.reason,
     };
 
     const validated = journeyProofSchema.safeParse(candidateResult);
@@ -423,17 +315,8 @@ export async function verifyProof(
       reason: validated.data.reason ?? null,
     };
 
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    return {
-      id: proof.id,
-      sourceType: proof.sourceType,
-      url: cloudinaryUrl,
-      status: "rejected",
-      verifiedAt: null,
-      reason: `Verification failed during analysis: ${message}`,
-    };
+  } catch (error) {
+    console.warn("Proof verification failed", proof.id, error instanceof Error ? error.name : "Unknown error");
+    return unsuccessful("failed", "The evidence could not be processed.");
   }
 }
-
-
