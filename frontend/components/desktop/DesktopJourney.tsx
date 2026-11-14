@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { LayoutAnimation, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import type { JourneyExperience, JourneyGoal, UserJourneyResponse } from '../../api/journey.api';
+import type { JourneyExperience, JourneyGoal, JourneyItemKind, UserJourneyResponse } from '../../api/journey.api';
+import { EndDateAction } from '../journey/EndDateAction';
 import { calculateDuration, formatToMonthYear } from '../../utils/helpers';
 import { L } from '../../constants/colors';
 import { DesktopAvatar, DesktopBadge, DesktopButton, DesktopChips, DesktopHeading, DesktopPage, DesktopSectionTitle, desktopStyles as d } from './DesktopUI';
@@ -13,7 +14,7 @@ const verificationLabels = {
   failed: 'Verification failed',
 } as const;
 
-function GoalCard({ goal }: { goal: JourneyGoal }) {
+function GoalCard({ goal, onSetEndDate }: { goal: JourneyGoal; onSetEndDate: (endDate: string) => Promise<void> }) {
   const [expanded, setExpanded] = useState(false);
   const ongoing = ['ONGOING', 'ACTIVE'].includes(goal.status?.toUpperCase());
   return <View style={[styles.goal, ongoing && { backgroundColor: '#EDF3EF', borderColor: '#BFD3C8' }]}>
@@ -31,6 +32,7 @@ function GoalCard({ goal }: { goal: JourneyGoal }) {
       {!!goal.topics?.length && <FieldGroup label="Topics"><DesktopChips items={goal.topics} /></FieldGroup>}
       {!!(goal.subtopics || ['Microservices', 'Event-Driven']).length && <FieldGroup label="Subtopics"><DesktopChips items={goal.subtopics || ['Microservices', 'Event-Driven']} /></FieldGroup>}
       <Field label="Duration" value={calculateDuration(goal.startDate, goal.endDate)} />
+      {ongoing && !goal.endDate && <EndDateAction label="Mark goal achieved" onSave={onSetEndDate} />}
     </View>}
   </View>;
 }
@@ -42,7 +44,7 @@ function Field({ label, value }: { label: string; value?: string | null }) {
   return value ? <FieldGroup label={label}><Text style={d.body}>{value}</Text></FieldGroup> : null;
 }
 
-function ExperienceCard({ experience: exp, journey }: { experience: JourneyExperience; journey: UserJourneyResponse }) {
+function ExperienceCard({ experience: exp, journey, onSetEndDate }: { experience: JourneyExperience; journey: UserJourneyResponse; onSetEndDate: (endDate: string) => Promise<void> }) {
   const [expanded, setExpanded] = useState(false);
   const verificationStatus = exp.verificationStatus ?? (exp.isVerified ? 'verified' : undefined);
   const transition = journey.transitions.find(t => t.toExperienceId === exp.id);
@@ -89,12 +91,19 @@ function ExperienceCard({ experience: exp, journey }: { experience: JourneyExper
           {!!transition?.decisionLabel && <Text style={[d.body, { fontStyle: 'italic' }]}>"{transition.decisionLabel}"</Text>}
         </View>}
         {!!exp.skills?.length && <FieldGroup label="Skills"><DesktopChips items={exp.skills.map(s => s.name)} /></FieldGroup>}
+        {!exp.endDate && <EndDateAction label="Set end date" onSave={onSetEndDate} />}
       </View>}
     </View>
   </View>;
 }
 
-export function DesktopJourney({ journey, imageUrl, onViewGraph, onRefresh }: { journey: UserJourneyResponse; imageUrl?: string; onViewGraph: () => void; onRefresh: () => void }) {
+export function DesktopJourney({ journey, imageUrl, onViewGraph, onRefresh, onCompleteItem }: {
+  journey: UserJourneyResponse;
+  imageUrl?: string;
+  onViewGraph: () => void;
+  onRefresh: () => void;
+  onCompleteItem: (kind: JourneyItemKind, id: string, endDate: string) => Promise<void>;
+}) {
   const { width } = useWindowDimensions();
   return <DesktopPage>
     <DesktopHeading title="Journey" subtitle="Your goals, experiences, and the decisions that connected them."
@@ -115,13 +124,13 @@ export function DesktopJourney({ journey, imageUrl, onViewGraph, onRefresh }: { 
     <View style={{ flexDirection: 'row', gap: width < 1100 ? 24 : 36, alignItems: 'flex-start' }}>
       {journey.goals.length > 0 && <View style={{ width: width < 1100 ? 300 : 330 }}>
         <DesktopSectionTitle title="Goals" count={journey.goals.length} />
-        {journey.goals.map(goal => <GoalCard key={goal.id} goal={goal} />)}
+        {journey.goals.map(goal => <GoalCard key={goal.id} goal={goal} onSetEndDate={date => onCompleteItem('goal', goal.id, date)} />)}
       </View>}
       {journey.experiences.length > 0 && <View style={{ flex: 1, minWidth: 0 }}>
         <DesktopSectionTitle title="Experience timeline" count={journey.experiences.length} />
         <View style={{ position: 'relative' }}>
           <View style={{ position: 'absolute', left: 5, top: 23, bottom: 36, width: 1, backgroundColor: '#C1D3C9' }} />
-          {journey.experiences.map(exp => <ExperienceCard key={exp.id} experience={exp} journey={journey} />)}
+          {journey.experiences.map(exp => <ExperienceCard key={exp.id} experience={exp} journey={journey} onSetEndDate={date => onCompleteItem('experience', exp.id, date)} />)}
         </View>
       </View>}
     </View>

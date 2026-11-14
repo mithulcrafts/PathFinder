@@ -73,6 +73,16 @@ export interface StartJourneyResponse {
   conversationId: string;
 }
 
+export type JourneyItemKind = 'experience' | 'goal';
+
+export function completeJourneyItem(token: string, kind: JourneyItemKind, id: string, endDate: string) {
+  return apiFetch<{ endDate: string; status: string | null }>(
+    `/user/journey/${kind}/${encodeURIComponent(id)}/end-date`,
+    { method: 'PATCH', body: JSON.stringify({ endDate }) },
+    token,
+  );
+}
+
 export interface SendMessageResponse {
   success: boolean;
   conversationId: string;

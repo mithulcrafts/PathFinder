@@ -31,6 +31,25 @@ const { groupCommunityPaths, layoutCommunityPath, PATH_CARD_WIDTH, PATH_CARD_HEI
 const { buildPublicJourneyUrl } = loadTypeScript(
   fileURLToPath(new URL('../utils/publicJourneyUrl.ts', import.meta.url)),
 );
+const { sortJourneyExperiences } = loadTypeScript(
+  fileURLToPath(new URL('../utils/helpers.ts', import.meta.url)),
+);
+
+test('Journey puts ongoing experiences first and reorders completed experiences by end date', () => {
+  const experiences = [
+    { id: 'recent-start', startDate: '2026-05-01', endDate: '2026-10-01' },
+    { id: 'earlier-end', startDate: '2026-02-01', endDate: '2026-05-01' },
+    { id: 'still-ongoing', startDate: '2025-10-01', endDate: null },
+    { id: 'closing', startDate: '2025-11-01', endDate: null },
+  ];
+  const ids = list => sortJourneyExperiences(list).map(experience => experience.id);
+  assert.deepEqual(ids(experiences), ['closing', 'still-ongoing', 'recent-start', 'earlier-end']);
+  const updated = experiences.map(experience => experience.id === 'closing'
+    ? { ...experience, endDate: '2026-11-01' }
+    : experience);
+  assert.deepEqual(ids(updated), ['still-ongoing', 'closing', 'recent-start', 'earlier-end']);
+  assert.equal(experiences[0].id, 'recent-start');
+});
 
 const graphNode = id => ({ id, title: `Experience ${id}`, authorUsername: 'alex' });
 const graphEdge = (fromId, toId) => ({ fromId, toId, label: `${fromId} to ${toId}` });
