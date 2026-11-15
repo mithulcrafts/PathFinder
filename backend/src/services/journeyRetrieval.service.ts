@@ -2,6 +2,7 @@ import { closeSession, getSession } from "./neo4j.service.js";
 
 export interface RetrievedJourney {
   username: string;
+  displayName?: string | null;
   summary: string;
   expertiseAreas: string[];
   imageUrl: string | null;
@@ -27,6 +28,7 @@ export async function retrieveJourneys(
 
       RETURN
         u.username AS username,
+        u.displayName AS displayName,
         u.summary AS summary,
         u.expertiseAreas AS expertiseAreas,
         u.imageUrl AS imageUrl,
@@ -40,6 +42,7 @@ export async function retrieveJourneys(
 
     return result.records.map((record) => ({
       username: record.get("username") as string,
+      displayName: (record.get("displayName") as string | null) ?? null,
 
       summary:
         (record.get("summary") as string) ?? "",

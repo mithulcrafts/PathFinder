@@ -311,9 +311,9 @@ export default function ResultsPage() {
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
               <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: L.teal, alignItems: 'center', justifyContent: 'center' }}>
-                <Text style={{ fontSize: 18, color: '#FFFFFF', fontFamily: 'Manrope_700Bold' }}>{user.username.charAt(0).toUpperCase()}</Text>
+                <Text style={{ fontSize: 18, color: '#FFFFFF', fontFamily: 'Manrope_700Bold' }}>{(user.displayName?.trim() || user.username).charAt(0).toUpperCase()}</Text>
               </View>
-              <Text style={{ fontFamily: 'Manrope_700Bold', fontSize: 16, color: UI.foreground }}>@{user.username}</Text>
+              <Text style={{ fontFamily: 'Manrope_700Bold', fontSize: 16, color: UI.foreground }}>{user.displayName?.trim() || `@${user.username}`}</Text>
             </View>
             {(user.reputationScore !== undefined && user.reputationScore > 0) && (
               <PillBadge
