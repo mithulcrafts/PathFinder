@@ -24,7 +24,7 @@ interface ChatMessage {
 
 export default function ShareJourneyPage() {
   const router = useRouter();
-  const { getToken } = useAuth();
+  const { getToken, isLoaded } = useAuth();
   const desktop = useDesktopLayout();
   const [mockVerification, setMockVerification] = useState(false);
 
@@ -174,6 +174,7 @@ export default function ShareJourneyPage() {
   };
 
   useEffect(() => {
+    if (!isLoaded) return;
     async function initSession() {
       setIsInitializing(true);
       setSessionError(null);
@@ -206,7 +207,7 @@ export default function ShareJourneyPage() {
     }
     initSession();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionAttempt]);
+  }, [isLoaded, sessionAttempt]);
 
   const sendMessage = async (text: string) => {
     const userText = text.trim();
@@ -279,7 +280,7 @@ export default function ShareJourneyPage() {
       console.warn('Failed to send message:', err);
       setMessages(prev => prev.filter(message => message.id !== userMsg.id));
       setInputText(current => current || userText);
-      displayAlert("Error", "Could not process your message. Please try again.");
+      displayAlert("Message not sent", "Your message is back in the chat box. Please try sending it again.");
     } finally {
       sendingMessage.current = false;
       setIsLoading(false);

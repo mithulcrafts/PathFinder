@@ -75,12 +75,20 @@ export interface StartJourneyResponse {
 
 export type JourneyItemKind = 'experience' | 'goal';
 
-export function completeJourneyItem(token: string, kind: JourneyItemKind, id: string, endDate: string) {
-  return apiFetch<{ endDate: string; status: string | null }>(
-    `/user/journey/${kind}/${encodeURIComponent(id)}/end-date`,
-    { method: 'PATCH', body: JSON.stringify({ endDate }) },
-    token,
-  );
+export async function completeJourneyItem(token: string, kind: JourneyItemKind, id: string, endDate: string) {
+  const endpoint = `/user/journey/${kind}/${encodeURIComponent(id)}/end-date`;
+  try {
+    return await apiFetch<{ endDate: string; status: string | null }>(
+      endpoint,
+      { method: 'PATCH', body: JSON.stringify({ endDate }) },
+      token,
+    );
+  } catch (error) {
+    if (error instanceof Error && error.message === `Endpoint ${endpoint} not implemented on the backend yet.`) {
+      throw new Error('The connected API does not support saving end dates. Check the API URL and update the running backend.');
+    }
+    throw error;
+  }
 }
 
 export interface SendMessageResponse {
