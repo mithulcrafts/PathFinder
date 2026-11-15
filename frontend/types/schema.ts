@@ -64,6 +64,7 @@ export interface JourneyMatch {
 export interface UserTrajectory {
   journeyMatch?: JourneyMatch | null;
   username: string;
+  displayName?: string | null;
   reputationScore: number;
   timeline: TimelineEvent[];
   ai_summary?: string;
