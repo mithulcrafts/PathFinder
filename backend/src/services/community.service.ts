@@ -232,7 +232,7 @@ export async function getCommunityJourney(
     const userResult = await session.run(
       `
       MATCH (u:User {username: $username})
-      RETURN u.username AS username, u.avatarUrl AS avatarUrl, coalesce(u.reputationScore, 0) AS reputationScore
+      RETURN u.username AS username, u.displayName AS displayName, u.avatarUrl AS avatarUrl, coalesce(u.reputationScore, 0) AS reputationScore
       `,
       { username }
     );
@@ -312,6 +312,7 @@ export async function getCommunityJourney(
         reputationScore: Number(userRecord!.get("reputationScore"))
       },
       username: userRecord!.get("username"),
+      displayName: userRecord!.get("displayName") ?? null,
       imageUrl: userRecord!.get("avatarUrl"),
       statistics: {
         goals: goals.length,

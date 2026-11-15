@@ -224,3 +224,12 @@ for (const mode of ['public', 'personal']) {
     });
   }
 }
+
+test('graph display name preserves center identity and legacy fallback', () => {
+ const journey={username:'test1',displayName:' Rohinth ',goals:[],experiences:[],transitions:[]};
+ const center=JSON.parse(buildJourneyGraphElements(journey))[0].data;
+ assert.equal(center.id,'user'); assert.equal(center.label,'Rohinth');
+ for(const name of [undefined,null,'  ']) {
+  assert.equal(JSON.parse(buildJourneyGraphElements({...journey,displayName:name}))[0].data.label,'@test1');
+ }
+});

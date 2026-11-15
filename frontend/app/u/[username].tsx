@@ -15,8 +15,8 @@ import { WebView } from 'react-native-webview';
 
 export default function PublicProfilePage() {
   const router = useRouter();
-  const { username, fromCommunity, fromQuery, imageUrl, expandedDetails, experienceId } = useLocalSearchParams<{
-    username: string; fromCommunity?: string; fromQuery?: string; imageUrl?: string; expandedDetails?: string; experienceId?: string;
+  const { username, fromCommunity, fromQuery, displayName, imageUrl, expandedDetails, experienceId } = useLocalSearchParams<{
+    username: string; displayName?: string; fromCommunity?: string; fromQuery?: string; imageUrl?: string; expandedDetails?: string; experienceId?: string;
   }>();
   const goBack = () => {
     if (fromCommunity === 'true') router.dismissTo('/(tabs)/community');
@@ -56,6 +56,7 @@ export default function PublicProfilePage() {
 
           setJourney({
             username: username,
+            displayName: displayName?.trim() || null,
             imageUrl: imageUrl || null,
             statistics: {
               goals: parsedDetails.goals?.length || 0,
@@ -76,7 +77,7 @@ export default function PublicProfilePage() {
     } else {
       console.warn("⚠️ No 'username' parameter is present.");
     }
-  }, [username, fromQuery, imageUrl, expandedDetails]);
+  }, [username, fromQuery, displayName, imageUrl, expandedDetails]);
 
   useEffect(() => {
     if (Platform.OS === 'web') {
@@ -239,12 +240,12 @@ export default function PublicProfilePage() {
               <Image source={{ uri: journey.imageUrl }} style={{ width: 48, height: 48 }} />
             ) : (
               <Text style={{ fontSize: 24, color: '#FFFFFF', fontWeight: '700' }}>
-                {(journey.username || 'U')[0].toUpperCase()}
+                {(journey.displayName?.trim() || journey.username || 'U')[0].toUpperCase()}
               </Text>
             )}
           </View>
           <View>
-            <Text style={{ fontSize: 16, fontWeight: '500', color: L.navy }}>@{journey.username}</Text>
+            <Text style={{ fontSize: 16, fontWeight: '500', color: L.navy }}>{journey.displayName?.trim() || `@${journey.username}`}</Text>
             <Text style={{ fontSize: 12, fontWeight: '500', color: L.teal, marginTop: 4 }}>
               {journey.statistics?.goals || 0} Goals • {journey.statistics?.experiences || 0} Experiences
             </Text>

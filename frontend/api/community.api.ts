@@ -13,6 +13,7 @@ export interface SearchCommunityUser {
 }
 
 export interface CommunityJourney extends UserJourneyResponse {
+  displayName?: string | null;
   imageUrl?: string | null;
 }
 
