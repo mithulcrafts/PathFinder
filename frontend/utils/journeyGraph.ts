@@ -3,13 +3,13 @@ import { L } from '../constants/colors';
 
 /** Retains the node IDs used by both screens' detail sheets. */
 export function buildJourneyGraphElements(
-  journey: UserJourneyResponse | null,
+  journey: (UserJourneyResponse & { displayName?: string | null }) | null,
   { filterMissingTransitions = false }: { filterMissingTransitions?: boolean } = {},
 ): string {
   if (!journey) return "[]";
   const elements: { data: Record<string, string | number> }[] = [];
   // User Node
-  elements.push({ data: { id: 'user', label: '@' + journey.username, color: L.navy, shape: 'ellipse', textColor: '#fff', borderWidth: 0, borderColor: '#000' } });
+  elements.push({ data: { id: 'user', label: journey.displayName?.trim() || '@' + journey.username, color: L.navy, shape: 'ellipse', textColor: '#fff', borderWidth: 0, borderColor: '#000' } });
 
   // Goals
   journey.goals.forEach(g => {

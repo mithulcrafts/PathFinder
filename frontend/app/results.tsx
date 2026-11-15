@@ -343,7 +343,7 @@ export default function ResultsPage() {
           <TouchableOpacity style={{ height: 56, borderRadius: 28, borderWidth: 2, borderColor: UI.teal, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }} onPress={() => {
             router.push({
               pathname: `/u/${user.username}`, params: {
-                fromQuery: 'true', imageUrl: user.imageUrl ?? '', expandedDetails: JSON.stringify(user.expandedDetails || { goals: [], experiences: [], transitions: [] })
+                fromQuery: 'true', displayName: user.displayName ?? '', imageUrl: user.imageUrl ?? '', expandedDetails: JSON.stringify(user.expandedDetails || { goals: [], experiences: [], transitions: [] })
               }
             });
           }}>
