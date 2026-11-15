@@ -5,9 +5,9 @@ export default function Resources() {
     {
       icon: "VIDEO",
       title: "Demo Video",
-      desc: "Watch a 3-minute video showing the Expo client interface, search loops, and path vector rendering.",
+      desc: "Watch an under-four-minute video showing the Expo client interface, search loops, and path vector rendering.",
       action: "Watch Video ↗",
-      url: "https://www.youtube.com/watch?v=cFn0jj-MVC8"
+      url: "https://drive.google.com/drive/folders/1kGDI-XOcYO-ezSivey-SQnrc3cla8BMA?usp=sharing"
     },
     {
       icon: "CODE",

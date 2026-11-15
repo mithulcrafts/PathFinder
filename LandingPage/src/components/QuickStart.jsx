@@ -12,8 +12,8 @@ export default function QuickStart() {
     {
       icon: "▶",
       title: "Watch Demo Video",
-      desc: "Watch a 3-minute walkthrough explaining the product features and UI.",
-      href: "https://www.youtube.com/watch?v=cFn0jj-MVC8",
+      desc: "Watch an under-four-minute walkthrough explaining the product features and UI.",
+      href: "https://drive.google.com/drive/folders/1kGDI-XOcYO-ezSivey-SQnrc3cla8BMA?usp=sharing",
       isAnchor: false
     },
     {

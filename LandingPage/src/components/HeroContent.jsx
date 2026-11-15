@@ -5,7 +5,7 @@ export default function HeroContent({
   title = <>Search experiences.<br />Not <span className="accent">opinions</span>.</>,
   subtext = "PathFinder turns real career journeys into a searchable knowledge graph — so you can find people who've faced your exact decision, and see what happened next.",
   primaryCta = { label: "Try PathFinder ↗", href: "#try-pathfinder" },
-  secondaryCta = { label: "Watch demo", href: "https://www.youtube.com/watch?v=cFn0jj-MVC8" },
+  secondaryCta = { label: "Watch demo", href: "https://drive.google.com/drive/folders/1kGDI-XOcYO-ezSivey-SQnrc3cla8BMA?usp=sharing" },
   children
 }) {
   return (
