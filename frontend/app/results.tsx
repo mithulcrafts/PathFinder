@@ -1,3 +1,4 @@
+import { JourneyMatchCard } from '../components/JourneyMatchCard';
 import { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
@@ -55,13 +56,6 @@ function LoadingSkeleton() {
   );
 }
 
-const getPseudoPct = (str: string, min: number, max: number) => {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return (Math.abs(hash) % (max - min + 1)) + min;
-};
 
 /* ── Main ──────────────────────────────────────────── */
 
@@ -118,6 +112,7 @@ export default function ResultsPage() {
 
   useEffect(() => {
     player.pause();
+    setJourneyIdx(0);
 
     setCurrentAudioUri(null);
     setIsPlaying(false);
@@ -212,7 +207,7 @@ export default function ResultsPage() {
 
   const { journeyStatistics: stats, aiInsights, timelineFeed, commonPatterns } = data.aggregatedContext;
   const topDecisions = commonPatterns?.slice(1, 4) || [];
-  const totalExperiences = timelineFeed?.reduce((acc, user) => acc + (user.expandedDetails?.experiences?.length || 0), 0) || 186;
+  const totalExperiences = timelineFeed?.reduce((acc, user) => acc + (user.expandedDetails?.experiences?.length || 0), 0) ?? 0;
 
   async function handleFollowUp() {
     if (!followUpQuery.trim()) return;
@@ -243,8 +238,8 @@ export default function ResultsPage() {
   const renderStatsCard = () => (
     <Animated.View entering={FadeInDown.delay(200).springify().damping(20)} style={{ backgroundColor: UI.tealTint, borderRadius: 16, padding: 24, marginBottom: 32, flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'center' }}>
       <View style={{ alignItems: 'center' }}>
-        <Text style={{ fontFamily: 'Manrope_500Medium', fontSize: 24, color: UI.teal }}>{stats?.usersAnalyzed || 24}</Text>
-        <Text style={{ fontFamily: 'Manrope_600SemiBold', fontSize: 10, letterSpacing: 1, color: UI.teal, opacity: 0.8, marginTop: 4 }}>VERIFIED USERS</Text>
+        <Text style={{ fontFamily: 'Manrope_500Medium', fontSize: 24, color: UI.teal }}>{stats?.usersAnalyzed ?? 0}</Text>
+        <Text style={{ fontFamily: 'Manrope_600SemiBold', fontSize: 10, letterSpacing: 1, color: UI.teal, opacity: 0.8, marginTop: 4 }}>JOURNEYS ANALYZED</Text>
       </View>
       <View style={{ width: 1, height: 40, backgroundColor: 'rgba(62, 107, 102, 0.2)' }} />
       <View style={{ alignItems: 'center' }}>
@@ -259,9 +254,9 @@ export default function ResultsPage() {
     const sortedDecisions = [...topDecisions]
       .map(d => ({
         ...d,
-        resolvedPercentage: Math.round(Number(d.percentage || getPseudoPct(d.description, 20, 70)))
+        resolvedPercentage: typeof d.percentage === "number" && Number.isFinite(d.percentage) ? Math.round(Math.max(0, Math.min(100, d.percentage))) : null
       }))
-      .sort((a, b) => b.resolvedPercentage - a.resolvedPercentage);
+      .sort((a, b) => (b.resolvedPercentage ?? -1) - (a.resolvedPercentage ?? -1));
     return (
       <Animated.View entering={FadeInDown.delay(300).springify().damping(20)} key="decisions" style={{ marginBottom: 32 }}>
         <SectionLabel style={{ marginBottom: 16, marginLeft: 8 }} color={UI.teal}>EMERGING PATTERNS</SectionLabel>
@@ -284,7 +279,7 @@ export default function ResultsPage() {
                 </Text>
                 <View style={{ backgroundColor: i === 0 ? UI.surface : UI.teal, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 }}>
                   <Text style={{ fontFamily: 'Manrope_700Bold', fontSize: 10, color: i === 0 ? UI.accent : '#FFF' }}>
-                    {d.resolvedPercentage}%
+                    {d.resolvedPercentage === null ? "Not available" : d.resolvedPercentage + "%"}
                   </Text>
                 </View>
               </View>
@@ -297,7 +292,7 @@ export default function ResultsPage() {
 
   const renderJourneys = () => {
     if (!timelineFeed || timelineFeed.length === 0) return null;
-    const user = timelineFeed[journeyIdx];
+    const user = timelineFeed[Math.min(journeyIdx, timelineFeed.length - 1)];
     return (
       <Animated.View entering={FadeInDown.delay(400).springify().damping(20)} key="journeys" style={{ marginBottom: 32 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
@@ -328,15 +323,16 @@ export default function ResultsPage() {
               />
             )}
           </View>
+          <JourneyMatchCard key={user.username + (user.journeyMatch?.computedAt ?? '')} match={user.journeyMatch} />
           <Text style={{ fontFamily: 'Manrope_400Regular', fontSize: 14, color: UI.foreground, lineHeight: 22, marginBottom: 16 }}>
-            {user.summary || user.ai_summary || "Backend engineering student building scalable systems through hackathons, open source contributions and internships."}
+            {user.summary || user.ai_summary || "No summary available."}
           </Text>
           <Text style={{ fontFamily: 'Manrope_600SemiBold', fontSize: 10, color: UI.teal, letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 12 }}>Expertise Areas</Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
             {(!user.expertiseAreas || user.expertiseAreas.length === 0) ? (
               <>
-                <PillBadge label="Backend Development" color={L.terracotta} bgColor={L.terracottaTint} />
-                <PillBadge label="Open Source" color={L.terracotta} bgColor={L.terracottaTint} />
+                <Text style={{ color: UI.foreground }}>No expertise areas added.</Text>
+
               </>
             ) : (
               user.expertiseAreas.slice(0, 3).map((area: string, i: number) => (

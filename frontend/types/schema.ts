@@ -55,7 +55,14 @@ export interface TimelineEvent {
   emotionLabel?: EmotionLabel;
 }
 
+export interface JourneyMatch {
+  percentage: number;
+  computedAt: string;
+  method: "weighted-graph-overlap-v1";
+  breakdown: { dimension: string; percentage: number; weight: number }[];
+}
 export interface UserTrajectory {
+  journeyMatch?: JourneyMatch | null;
   username: string;
   reputationScore: number;
   timeline: TimelineEvent[];
