@@ -72,6 +72,14 @@ test("empty or failed extraction keeps the user's text in a starter draft and ne
   assert.equal(recovered.experiences[0]?.startDate, "06 2024");
 });
 
+test("duplicate extracted experiences in one turn or a later turn keep the original ID", () => {
+  const duplicate = { ...internship, title: internship.title.toUpperCase(), context: "Automated  reporting with Python." };
+  const initial = applyJourneyDraftChanges({ experiences: [internship, duplicate] }, []);
+  assert.equal(initial.experiences.length, 1);
+  const retried = applyJourneyDraftChanges({ experiences: [duplicate] }, initial.experiences);
+  assert.deepEqual(retried.experiences.map(experience => experience.id), [initial.experiences[0]!.id]);
+});
+
 test("extraction prompt distinguishes the current draft, recent user turns and latest correction", () => {
   const previous = { ...internship, id: "private-id", goalIds: ["goal-1"], proofs: [] };
   const prompt = JSON.parse(buildJourneyDraftPrompt("It started in July.", [previous], [

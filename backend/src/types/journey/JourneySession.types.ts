@@ -22,6 +22,7 @@ export interface JourneySession {
   state: JourneyState;
   conversationHistory: JourneyMessage[];
   journeyDraft: PartialJourneyDraft | null;
+  lastDraftChanges?: Record<string, string[]>;
   currentExperienceIndex: number;
   createdAt: number;
   updatedAt: number;

@@ -45,6 +45,11 @@ export function applyJourneyDraftChanges(
       const { title, context, timelineSummary } = changes;
       const description = context ?? (previous.length === 0 ? narrative : "");
       if (!description) continue;
+      if (experiences.some(experience =>
+        experience.title.toLowerCase() === (title ?? "Untitled experience").toLowerCase() &&
+        experience.context.replace(/\s+/g, " ").toLowerCase() === description.replace(/\s+/g, " ").toLowerCase() &&
+        experience.startDate === (changes.startDate ?? undefined)
+      )) continue;
       const newFields = Object.fromEntries(Object.entries(changes).filter(([, value]) => value != null));
       experiences.push({
         ...newFields,
