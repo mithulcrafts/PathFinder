@@ -57,10 +57,27 @@ test('search results use actual data rather than synthesized fallback statistics
   assert.match(results, /computedAt/);
 });
 test('query response is private and matching identity is server-authenticated', () => {
-  const controller = fs.readFileSync(new URL('../../backend/src/controllers/query.controller.ts', import.meta.url), 'utf8');
+  const controller = fs.readFileSync(
+    new URL('../../backend/src/controllers/query.controller.ts', import.meta.url),
+    'utf8'
+  );
+
   assert.match(controller, /getAuth\(req\).userId/);
   assert.match(controller, /private, no-store/);
   assert.match(controller, /vary\("Authorization"\)/);
-  const api = fs.readFileSync(new URL('../api/query.api.ts', import.meta.url), 'utf8');
-  assert.equal((api.match(/Authorization: `Bearer \$\{token\}`/g) ?? []).length, 2);
+
+  const api = fs.readFileSync(
+    new URL('../api/query.api.ts', import.meta.url),
+    'utf8'
+  );
+
+  assert.match(api, /import\s*\{\s*apiRequest\s*\}\s*from\s*["']\.\/api["']/);
+  assert.equal((api.match(/apiRequest\(/g) ?? []).length, 2);
+
+  const sharedApi = fs.readFileSync(
+    new URL('../api/api.ts', import.meta.url),
+    'utf8'
+  );
+
+  assert.match(sharedApi, /Authorization: `Bearer \$\{token\}`/);
 });
